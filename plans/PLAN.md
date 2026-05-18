@@ -12,8 +12,9 @@
 1. [Definición de Producto (40%)](#1-definición-de-producto-40)
 2. [Arquitectura Técnica (40%)](#2-arquitectura-técnica-40)
 3. [Integración de IA (20%)](#3-integración-de-ia-20)
-4. [Organización GitHub](#4-organización-github)
-5. [Plan de Implementación](#5-plan-de-implementación)
+4. [Criterios de Evaluación del Profesor](#4-criterios-de-evaluación-del-profesor-adaptados)
+5. [Organización GitHub](#5-organización-github-actualizada)
+6. [Plan de Implementación](#6-plan-de-implementación)
 
 ---
 
@@ -341,9 +342,286 @@ flowchart LR
 
 ---
 
-## 4. ORGANIZACIÓN GITHUB
+## 4. CRITERIOS DE EVALUACIÓN DEL PROFESOR (ADAPTADOS)
 
-### 4.1 Estructura de Branches
+> Los siguientes criterios fueron proporcionados para un proyecto Lumen/PHP anterior. Se han adaptado a Next.js 14 + TypeScript manteniendo el espíritu de cada requisito.
+
+### 4.1 Arquitectura Hexagonal y Patrón Repositorio
+
+**Objetivo:** Organizar el código en capas con responsabilidades bien definidas, usando interfaces e implementaciones separadas.
+
+**Adaptación a Next.js:**
+
+```mermaid
+flowchart TD
+    subgraph Domain["🏛️ Capa de Dominio domain/"]
+        D1["venue.ts<br/>Interfaces: Venue, VenueCategory<br/>Value Objects: Coordinate, TimeWindow"]
+        D2["tsp.ts<br/>Algoritmo TSP puro<br/>Sin dependencias externas"]
+    end
+
+    subgraph Application["⚙️ Capa de Aplicación lib/"]
+        A1["repositories/<br/>IVenueRepository.ts<br/>(interfaz)"]
+        A2["repositories/<br/>LocalVenueRepository.ts<br/>(implementación: catálogo local)"]
+        A3["repositories/<br/>OverpassVenueRepository.ts<br/>(implementación: Overpass API)"]
+        A4["services/<br/>VenueSearchService.ts<br/>(orquestador: local → Overpass → Nominatim)"]
+        A5["services/<br/>RouteOptimizationService.ts<br/>(TSP + featured weight)"]
+    end
+
+    subgraph Infrastructure["🔧 Capa de Infraestructura"]
+        I1["overpass.ts<br/>Cliente HTTP Overpass"]
+        I2["geocoding.ts<br/>Cliente HTTP Nominatim"]
+        I3["routing.ts<br/>Cliente HTTP OSRM"]
+        I4["useLocalStorage.ts<br/>Persistencia localStorage"]
+    end
+
+    subgraph Presentation["🎨 Capa de Presentación components/"]
+        P1["Sidebar.tsx, VenueList.tsx<br/>VenueCard.tsx, CategorySelector.tsx"]
+        P2["VenueAutocomplete.tsx<br/>MapView.tsx"]
+        P3["page.tsx, layout.tsx"]
+    end
+
+    D1 --> A1
+    A1 --> A2 & A3
+    A2 & A3 --> A4
+    D1 & D2 --> A5
+    A4 --> I1 & I2
+    A5 --> I3
+    A4 & A5 --> P1 & P2 & P3
+```
+
+**Estructura de repositorios:**
+
+```typescript
+// src/lib/repositories/IVenueRepository.ts
+export interface IVenueRepository {
+  searchByName(query: string, category?: VenueCategory): Promise<Venue[]>;
+  getById(id: string): Promise<Venue | null>;
+}
+
+// src/lib/repositories/LocalVenueRepository.ts
+export class LocalVenueRepository implements IVenueRepository {
+  async searchByName(query: string, category?: VenueCategory): Promise<Venue[]> {
+    return searchLocalVenues(query, category);
+  }
+  async getById(id: string): Promise<Venue | null> {
+    return LOCAL_VENUES.find(v => v.id === id) ?? null;
+  }
+}
+
+// src/lib/repositories/OverpassVenueRepository.ts
+export class OverpassVenueRepository implements IVenueRepository {
+  async searchByName(query: string, category?: VenueCategory): Promise<Venue[]> {
+    return searchVenues(query, category);
+  }
+  async getById(id: string): Promise<Venue | null> {
+    // Overpass no soporta búsqueda por ID de forma eficiente
+    return null;
+  }
+}
+```
+
+### 4.2 Testing (Unitarios, Integración, E2E)
+
+**Objetivo:** Tests a tres niveles siguiendo los estándares vistos en clase.
+
+| Nivel | Framework | Qué testear | Ejemplos |
+|---|---|---|---|
+| **Unitarios** | Vitest | Lógica de negocio aislada | `tsp.ts`: nearestNeighbor, twoOpt, weightedDistance, haversineDistance |
+| **Integración** | Vitest + MSW | Flujo completo contra APIs mock | `VenueSearchService`: local → Overpass → Nominatim |
+| **E2E** | Playwright | Flujo completo del usuario en navegador | Buscar venue, añadirlo, optimizar ruta, ver mapa |
+
+**Tests unitarios (TSP):**
+
+```typescript
+// src/lib/__tests__/tsp.test.ts
+describe("weightedDistance", () => {
+  it("aplica 0.7x a venues destacados", () => {
+    const featured: Venue = { /* ... */ isFeatured: true };
+    const normal: Venue = { /* ... */ isFeatured: false };
+    const config: TSPConfig = { featuredWeight: 0.7 };
+    
+    const distFeatured = weightedDistance(origin, featured, config);
+    const distNormal = weightedDistance(origin, normal, config);
+    
+    expect(distFeatured).toBeLessThan(distNormal);
+    expect(distFeatured).toBeCloseTo(distNormal * 0.7);
+  });
+  
+  it("no modifica distancia si isFeatured es false", () => {
+    const venue: Venue = { /* ... */ isFeatured: false };
+    const dist = weightedDistance(origin, venue, DEFAULT_CONFIG);
+    expect(dist).toBe(haversineDistance(origin.coordinates, venue.coordinates));
+  });
+});
+```
+
+**Tests de integración (VenueSearchService):**
+
+```typescript
+// src/lib/__tests__/venue-search.integration.test.ts
+describe("VenueSearchService", () => {
+  it("busca primero en catálogo local, luego en Overpass", async () => {
+    const service = new VenueSearchService();
+    const results = await service.search("Botín");
+    expect(results[0].name).toContain("Botín");
+    expect(results[0].category).toBe("restaurant");
+  });
+});
+```
+
+**Colección Postman:**
+
+Exportar colección `RouteWise.postman_collection.json` en la raíz del proyecto cubriendo:
+- `GET /api/venues?q=Botín` — Búsqueda de venues
+- `GET /api/venues?q=...&category=restaurant` — Búsqueda filtrada
+- `POST /api/optimize` — Optimizar ruta con venues
+- `GET /api/route?coords=...` — Obtener ruta OSRM
+
+### 4.3 CI/CD con Husky + GitHub Actions
+
+**Objetivo:** Pre-commit hooks y pipeline de CI que ejecuten lint, type-check y tests.
+
+**Adaptación:** GrumPHP es de PHP. En Next.js usamos:
+
+| Herramienta | Propósito | Equivalente a GrumPHP |
+|---|---|---|
+| **Husky** | Git hooks (pre-commit, pre-push) | ✅ Misma función |
+| **lint-staged** | Ejecutar lint solo en archivos staged | ✅ Misma función |
+| **GitHub Actions** | CI pipeline en cada push/PR | ✅ Misma función |
+
+**Configuración de Husky (`.husky/pre-commit`):**
+
+```bash
+npx lint-staged
+```
+
+**Configuración de lint-staged (`package.json`):**
+
+```json
+{
+  "lint-staged": {
+    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md}": ["prettier --write"]
+  }
+}
+```
+
+**Pipeline de CI (`.github/workflows/ci.yml`):**
+
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint          # ESLint
+      - run: npm run type-check    # tsc --noEmit
+      - run: npm run test          # Vitest
+      - run: npm run build         # next build
+```
+
+### 4.4 Dockerización
+
+**Objetivo:** Containerizar la app con Docker + docker-compose para que cualquiera la levante con un solo comando.
+
+**Estructura:**
+
+```
+RouteWise/
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+└── nginx.conf              # Opcional: reverse proxy
+```
+
+**`Dockerfile`:**
+
+```dockerfile
+FROM node:20-alpine AS base
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+FROM base AS build
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS production
+WORKDIR /app
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/node_modules ./node_modules
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+**`docker-compose.yml`:**
+
+```yaml
+version: "3.8"
+services:
+  routewise:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - osrm-data:/data
+    command: >
+      sh -c "osrm-routed --algorithm mld /data/madrid.osrm"
+    restart: unless-stopped
+
+volumes:
+  osrm-data:
+```
+
+### 4.5 Clean Code
+
+**Objetivo:** Aplicar buenas prácticas: mismo idioma, nomenclatura consistente, sin código muerto, sin lógica duplicada, sin credenciales hardcodeadas, HTTP codes coherentes.
+
+| Práctica | Cómo se aplica en RouteWise |
+|---|---|
+| **Mismo idioma** | Código en inglés (variables, funciones, tipos). UI/UX en español (labels, mensajes al usuario). |
+| **Nomenclatura consistente** | `camelCase` para variables/funciones, `PascalCase` para interfaces/types/components, `UPPER_CASE` para constantes. |
+| **Sin código muerto** | Eliminar `Stop`, `Suggestion` antiguos. No dejar props sin usar. |
+| **Sin lógica duplicada** | Extraer `weightedDistance` en lugar de duplicar la lógica en nearestNeighbor y twoOpt. |
+| **Sin credenciales hardcodeadas** | Usar `.env.local` para API keys si se añaden en futuro. Nunca en el código. |
+| **HTTP codes coherentes** | Las APIs externas (OSRM, Nominatim, Overpass) se envuelven con manejo de errores consistente. |
+| **Código como prosa** | Nombres descriptivos: `searchLocalVenues` en vez de `searchLoc`, `isFeatured` en vez de `feat`. |
+
+### 4.6 Documentación y Repositorio
+
+**Objetivo:** README claro, PDF de entrega, commits estandarizados, repo limpio.
+
+| Elemento | Formato | Ubicación |
+|---|---|---|
+| **README** | Markdown con instrucciones de instalación, Docker, tests | `README.md` |
+| **PDF entrega** | Decisiones técnicas, problemas encontrados, distribución del trabajo | `docs/entrega.pdf` |
+| **Commits** | `[#issue] - Verbo [scope]: mensaje` | Git log |
+| **Issues** | Issues de GitHub con descripción, AC, archivos afectados | GitHub Issues |
+| **PRs** | Pull requests de feature/* → develop → main | GitHub PRs |
+| **Colección Postman** | Exportada en el repo | `RouteWise.postman_collection.json` |
+
+---
+
+## 5. ORGANIZACIÓN GITHUB (ACTUALIZADA)
+
+### 5.1 Estructura de Branches
 
 ```
 main                        # Producción (protegida)
@@ -361,7 +639,7 @@ main                        # Producción (protegida)
 └── hotfix/*
 ```
 
-### 4.2 Flujo de Trabajo
+### 5.2 Flujo de Trabajo
 
 ```mermaid
 flowchart LR
@@ -379,7 +657,7 @@ flowchart LR
     RC --> MAIN["✅ main (v1.0.0)"]
 ```
 
-### 4.3 Convención de Commits
+### 5.3 Convención de Commits
 
 Formato: `[#issue] - Verbo [scope]: mensaje`
 
@@ -397,7 +675,7 @@ Formato: `[#issue] - Verbo [scope]: mensaje`
 
 ---
 
-## 5. PLAN DE IMPLEMENTACIÓN
+## 6. PLAN DE IMPLEMENTACIÓN
 
 ### Fase 1: Modelo de Datos y Tipos
 
