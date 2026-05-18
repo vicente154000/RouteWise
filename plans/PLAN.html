@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLAN MAESTRO: RouteWise → App de Ocio y Gastronomía (B2B2C)</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#3b82f6',
+        primaryTextColor: '#fff',
+        primaryBorderColor: '#2563eb',
+        lineColor: '#6b7280',
+        secondaryColor: '#f3f4f6',
+        tertiaryColor: '#ffffff',
+        fontSize: '14px'
+      },
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #111827;
+      --text-secondary: #6b7280;
+      --border: #e5e7eb;
+      --accent: #3b82f6;
+      --accent-light: #eff6ff;
+      --code-bg: #f9fafb;
+      --card-bg: #ffffff;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --text: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border: #334155;
+        --accent: #60a5fa;
+        --accent-light: #1e293b;
+        --code-bg: #1e293b;
+        --card-bg: #1e293b;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--text);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.3rem;
+    }
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+    }
+    p { margin-bottom: 1rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    hr {
+      border: none;
+      border-top: 2px solid var(--border);
+      margin: 2rem 0;
+    }
+    blockquote {
+      border-left: 4px solid var(--accent);
+      padding: 0.5rem 1rem;
+      margin: 1rem 0;
+      background: var(--accent-light);
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+    blockquote p { margin: 0; }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+      background: var(--code-bg);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.875em;
+      border: 1px solid var(--border);
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+    }
+    th {
+      background: var(--accent-light);
+      font-weight: 600;
+      color: var(--text);
+    }
+    tr:nth-child(even) { background: var(--code-bg); }
+    ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+    li { margin-bottom: 0.25rem; }
+    .mermaid-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+    .mermaid-container svg { max-width: 100%; height: auto; }
+    .meta {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .toc {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--shadow);
+    }
+    .toc h3 { margin-top: 0; }
+    .toc ol { margin-bottom: 0; }
+    .toc li { margin-bottom: 0.4rem; }
+    .file-path {
+      font-family: 'SF Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 0.1rem 0.3rem;
+      border-radius: 0.25rem;
+    }
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.25rem; }
+      table { font-size: 0.8rem; }
+      th, td { padding: 0.4rem 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <h1>PLAN MAESTRO: RouteWise → App de Ocio y Gastronomía (B2B2C)</h1>
+    <div class="meta">
+      <span class="badge">Versi&oacute;n 1.0</span>
+      <span class="badge">2026-05-18</span>
+      <span class="badge">Modo: Arquitecto</span>
+      <span class="badge">Siguiente: Implementaci&oacute;n Code</span>
+    </div>
+
+    <div class="toc">
+      <h3>&Iacute;ndice</h3>
+      <ol>
+        <li><a href="#definicion-producto">Definici&oacute;n de Producto (40%)</a></li>
+        <li><a href="#arquitectura-tecnica">Arquitectura T&eacute;cnica (40%)</a></li>
+        <li><a href="#integracion-ia">Integraci&oacute;n de IA (20%)</a></li>
+        <li><a href="#organizacion-github">Organizaci&oacute;n GitHub</a></li>
+        <li><a href="#plan-implementacion">Plan de Implementaci&oacute;n</a></li>
+      </ol>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 1: DEFINICIÓN DE PRODUCTO -->
+    <!-- ============================================================ -->
+    <h2 id="definicion-producto">1. Definici&oacute;n de Producto (40%)</h2>
+
+    <h3>1.1 Visi&oacute;n</h3>
+    <p><strong>RouteWise</strong> es una plataforma web interactiva que elimina la <em>fatiga de decisi&oacute;n</em> del turista. En lugar de saltar entre Google Maps, TripAdvisor y Google para planificar una salida nocturna, el turista selecciona sus preferencias y la app genera un <strong>itinerario inteligente y optimizado</strong> en un mapa, combinando restaurantes, bares y discotecas en la ruta m&aacute;s eficiente mediante algoritmos TSP.</p>
+
+    <h3>1.2 Modelo de Negocio (B2B2C)</h3>
+    <ul>
+      <li><strong>B2C (Turista):</strong> App gratuita. Genera rutas de ocio personalizadas.</li>
+      <li><strong>B2B (Hostelero):</strong> Suscripci&oacute;n "Destacado" para aparecer con prioridad en las rutas. El algoritmo TSP aplica un peso reducido a los locales destacados, haciendo que sean seleccionados antes en la ruta &oacute;ptima.</li>
+    </ul>
+
+    <h3>1.3 User Personas</h3>
+    <table>
+      <thead>
+        <tr><th>Persona</th><th>Problema</th><th>Soluci&oacute;n RouteWise</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Turista</strong> (18-40 a&ntilde;os)</td>
+          <td>"No s&eacute; por d&oacute;nde empezar. &iquest;D&oacute;nde cenar, luego copas, luego discoteca? Tengo que mirar 3 apps distintas."</td>
+          <td>Un solo clic &rarr; ruta completa optimizada con hora estimada de llegada a cada local.</td>
+        </tr>
+        <tr>
+          <td><strong>Hostelero</strong> (due&ntilde;o de restaurante/bar/discoteca)</td>
+          <td>"Mi local est&aacute; en una zona tur&iacute;stica pero no destaco frente a la competencia."</td>
+          <td>Suscripci&oacute;n mensual para aparecer como "Destacado" con prioridad en las rutas generadas cerca de su local.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>1.4 User Flow (Turista)</h3>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart TD
+    A["🏠 Landing Page"] --> B["Selecciona preferencias:<br/>🍽️ Restaurante<br/>🍺 Bar<br/>🪩 Discoteca"]
+    B --> C["Elige hora de inicio<br/>(ej: 20:00)"]
+    C --> D["Busca locales por nombre<br/>o haz clic en el mapa"]
+    D --> E["Cada local muestra:<br/>Nombre, Categoría, ⭐ Destacado"]
+    E --> F["🚀 Optimizar Ruta Gastronómica"]
+    F --> G["Itinerario generado:<br/>1. 🍽️ La Tasquita 20:00-21:30<br/>2. 🍺 El Tigre 21:45-23:00<br/>3. 🪩 Kapital 23:15-..."]
+    G --> H["Compartir / Guardar<br/>itinerario en localStorage"]
+    
+    style F stroke:#22c55e,stroke-width:3px
+      </div>
+    </div>
+
+    <h3>1.5 User Flow (Hostelero &mdash; Futuro)</h3>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart TD
+    A["🔐 Login Google OAuth"] --> B["Panel de Gestión"]
+    B --> C["Registrar / Editar mi local"]
+    C --> D["Nombre, dirección,<br/>categoría, horario"]
+    D --> E["💎 Activar 'Destacado'<br/>(suscripción)"]
+    E --> F["✅ El local aparece con<br/>prioridad en rutas<br/>de la zona"]
+    
+    style E stroke:#f59e0b,stroke-width:3px
+      </div>
+    </div>
+
+    <h3>1.6 Modelo de Datos</h3>
+    <h4>Archivo: <span class="file-path">src/lib/venue.ts</span></h4>
+    <pre><code>// === Tipos base (compartidos con tsp.ts) ===
+export type Coordinate = { lat: number; lng: number };
+
+export interface TimeWindow {
+  estimatedArrival?: string;  // HH:MM - calculado tras optimizar
+  deadline?: string;          // HH:MM - l&iacute;mite fijado por el usuario
+}
+
+// === Categor&iacute;as de ocio ===
+export type VenueCategory = "restaurant" | "bar" | "nightclub";
+
+export const VENUE_CATEGORY_LABELS: Record<VenueCategory, string> = {
+  restaurant: "Restaurante",
+  bar: "Bar",
+  nightclub: "Discoteca",
+};
+
+export const VENUE_CATEGORY_ICONS: Record<VenueCategory, string> = {
+  restaurant: "🍽️",
+  bar: "🍺",
+  nightclub: "🪩",
+};
+
+export const VENUE_CATEGORY_COLORS: Record<VenueCategory, string> = {
+  restaurant: "#22c55e",  // verde
+  bar: "#3b82f6",         // azul
+  nightclub: "#a855f7",   // p&uacute;rpura
+};
+
+// === Local comercial ===
+export interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  coordinates: Coordinate;
+  category: VenueCategory;
+  isFeatured: boolean;       // Destacado (B2B)
+  timeWindow?: TimeWindow;
+}
+
+// === Preferencias del turista ===
+export interface UserPreferences {
+  categories: VenueCategory[];  // Filtros activos
+  startTime: string;            // "20:00"
+}
+
+// === Itinerario generado ===
+export interface Itinerary {
+  id: string;
+  venues: Venue[];
+  totalDistance: number;        // km
+  totalDuration: number;        // segundos
+  geometry: Coordinate[];
+  createdAt: string;
+}</code></pre>
+
+    <hr>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 2: ARQUITECTURA TÉCNICA -->
+    <!-- ============================================================ -->
+    <h2 id="arquitectura-tecnica">2. Arquitectura T&eacute;cnica (40%)</h2>
+
+    <h3>2.1 Stack Tecnol&oacute;gico</h3>
+    <table>
+      <thead>
+        <tr><th>Tecnolog&iacute;a</th><th>Versi&oacute;n</th><th>Prop&oacute;sito</th><th>Justificaci&oacute;n</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Next.js 14</strong> (App Router)</td><td>14.2.35</td><td>Framework frontend</td><td>SSR/SSG, routing basado en archivos, ya configurado</td></tr>
+        <tr><td><strong>TypeScript</strong></td><td>5.x</td><td>Lenguaje</td><td>Tipado estricto (<code>strict: true</code>), ya configurado</td></tr>
+        <tr><td><strong>Tailwind CSS</strong></td><td>3.4</td><td>Estilos</td><td>Utility-first, ya integrado con Shadcn</td></tr>
+        <tr><td><strong>Shadcn/ui</strong></td><td>latest</td><td>Componentes UI</td><td>Headless + estilizados (Card, Badge, Button, ScrollArea)</td></tr>
+        <tr><td><strong>MapLibre GL</strong></td><td>5.24</td><td>Mapas vectoriales</td><td><strong>Gratuito</strong>, sin API key, vector tiles r&aacute;pidos</td></tr>
+        <tr><td><strong>OSRM</strong></td><td>&mdash;</td><td>Routing por carretera</td><td><strong>Gratuito</strong>, self-hostable, API REST simple</td></tr>
+        <tr><td><strong>Nominatim</strong></td><td>&mdash;</td><td>Geocoding</td><td><strong>Gratuito</strong> (OpenStreetMap), 1 req/s</td></tr>
+        <tr><td><strong>Overpass API</strong></td><td>&mdash;</td><td>B&uacute;squeda de locales</td><td><strong>Gratuito</strong> (OSM), busca por nombre y categor&iacute;a</td></tr>
+        <tr><td><strong>TSP Algorithm</strong></td><td>propio</td><td>Optimizaci&oacute;n de rutas</td><td>Nearest Neighbor + 2-opt, O(n&sup2;), sin dependencias</td></tr>
+        <tr><td><strong>Cat&aacute;logo local</strong></td><td>JSON</td><td>Datos de ejemplo</td><td>15 locales ficticios en Madrid para demo offline</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2 Arquitectura de Componentes</h3>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart TD
+    subgraph Pages["📄 Páginas (App Router)"]
+        P1["page.tsx<br/>Home - Mapa + Sidebar"]
+        P2["/dashboard/page.tsx<br/>Panel hostelero (futuro)"]
+    end
+    
+    subgraph Components["🧩 Componentes"]
+        C1["Sidebar.tsx<br/>Panel lateral"]
+        C2["VenueList.tsx<br/>Lista de locales<br/>(refactor StopList)"]
+        C3["MapView.tsx<br/>Mapa interactivo"]
+        C4["VenueAutocomplete.tsx<br/>Buscador de locales<br/>(refactor AddressAutocomplete)"]
+        C5["CategorySelector.tsx<br/>NUEVO: Filtro categorías"]
+        C6["VenueCard.tsx<br/>NUEVO: Card de local"]
+    end
+    
+    subgraph Lib["📚 Librerías"]
+        L1["tsp.ts<br/>TSP + peso isFeatured"]
+        L2["routing.ts<br/>OSRM routing"]
+        L3["geocoding.ts<br/>Nominatim"]
+        L4["venue.ts<br/>NUEVO: Tipos Venue"]
+        L5["venues-data.ts<br/>NUEVO: Catálogo local"]
+        L6["overpass.ts<br/>NUEVO: Overpass API"]
+        L7["useLocalStorage.ts<br/>Persistencia"]
+    end
+    
+    P1 --> C1 & C3
+    C1 --> C2 & C4 & C5
+    C2 --> C6
+    C3 --> L2 & L3
+    C1 --> L1
+    L1 --> L4
+    C4 --> L5 & L6
+      </div>
+    </div>
+
+    <h3>2.3 Decisiones T&eacute;cnicas Justificadas</h3>
+    <table>
+      <thead>
+        <tr><th>Decisi&oacute;n</th><th>Alternativa descartada</th><th>Por qu&eacute; esta opci&oacute;n</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>TSP con Nearest Neighbor + 2-opt</strong></td><td>Google OR-Tools, algoritmo gen&eacute;tico</td><td>Sin dependencias externas, O(n&sup2;) aceptable para <50 venues</td></tr>
+        <tr><td><strong>MapLibre GL</strong> (vector tiles)</td><td>Google Maps API, Leaflet</td><td><strong>Gratuito 100%</strong>, sin API key</td></tr>
+        <tr><td><strong>OSRM para routing</strong></td><td>Google Directions API</td><td>Gratuito, self-hostable</td></tr>
+        <tr><td><strong>Nominatim para geocoding</strong></td><td>Google Geocoding API</td><td>Gratuito</td></tr>
+        <tr><td><strong>Overpass para b&uacute;squeda de locales</strong></td><td>Google Places API</td><td>Gratuito, datos estructurados de OSM</td></tr>
+        <tr><td><strong>Cat&aacute;logo local + Overpass</strong></td><td>Solo Overpass</td><td>Demo funciona offline, fallback si Overpass falla</td></tr>
+        <tr><td><strong>LocalStorage</strong></td><td>IndexedDB, Zustand</td><td>Simple, suficiente para MVP</td></tr>
+        <tr><td><strong>Shadcn/ui</strong></td><td>Material UI, Chakra UI</td><td>Bundle peque&ntilde;o, Tailwind nativo</td></tr>
+        <tr><td><strong>Sin BD en MVP</strong></td><td>PostgreSQL, Supabase</td><td>100% client-side hasta fase B2B</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.4 Algoritmo TSP con Peso de Destacados</h3>
+    <p>El coraz&oacute;n matem&aacute;tico se modifica para dar prioridad a locales con <code>isFeatured = true</code>:</p>
+    <pre><code>// src/lib/tsp.ts
+
+export interface TSPConfig {
+  featuredWeight: number;  // 0.7 = 30% descuento en distancia
+}
+
+const DEFAULT_CONFIG: TSPConfig = { featuredWeight: 0.7 };
+
+function weightedDistance(from: Venue, to: Venue, config: TSPConfig): number {
+  const baseDist = haversineDistance(from.coordinates, to.coordinates);
+  if (to.isFeatured) {
+    return baseDist * config.featuredWeight;
+  }
+  return baseDist;
+}</code></pre>
+    <p><strong>Efecto:</strong> Un local destacado a 2.5 km se comporta como si estuviera a 1.75 km, haciendo que el TSP lo prefiera sobre uno no destacado a 2.0 km.</p>
+
+    <h3>2.5 B&uacute;squeda de Locales (Cat&aacute;logo Local + Overpass)</h3>
+    <p>Estrategia en 3 capas:</p>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart TD
+    A["Usuario escribe 'La Tasquita'"] --> B["Buscar en<br/>catálogo local"]
+    B --> C{"¿Encontrado?"}
+    C -->|"Sí"| D["Mostrar resultado<br/>con categoría"]
+    C -->|"No"| E["Consultar Overpass API<br/>(OSM)"]
+    E --> F{"¿Resultados?"}
+    F -->|"Sí"| G["Mostrar resultados<br/>con categoría inferida"]
+    F -->|"No"| H["Fallback a Nominatim<br/>(dirección genérica)"]
+    H --> I["Usuario asigna<br/>categoría manualmente"]
+      </div>
+    </div>
+
+    <h3>2.6 Migraci&oacute;n de localStorage</h3>
+    <p>El cambio de <code>Stop</code> &rarr; <code>Venue</code> es rompedor. Estrategia:</p>
+    <pre><code>// En page.tsx
+const STORAGE_VERSION = 2;
+
+function migrateStorage(): void {
+  const version = localStorage.getItem("routewise-schema-version");
+  if (version === null || Number(version) < STORAGE_VERSION) {
+    // Limpiar datos del schema anterior (Stop)
+    localStorage.removeItem("routewise-stops");
+    localStorage.removeItem("routewise-optimized");
+    localStorage.removeItem("routewise-geometry");
+    localStorage.removeItem("routewise-isOptimized");
+    localStorage.setItem("routewise-schema-version", String(STORAGE_VERSION));
+  }
+}</code></pre>
+
+    <h3>2.7 Estructura de Archivos Final</h3>
+    <pre><code>src/
+├── app/
+│   ├── layout.tsx                    # Metadata actualizada
+│   ├── page.tsx                      # Home refactorizado (Venue)
+│   ├── globals.css                   # Sin cambios
+│   └── fonts/
+├── components/
+│   ├── Sidebar.tsx                   # Refactorizado: Stop &rarr; Venue
+│   ├── VenueList.tsx                 # Renombrado desde StopList.tsx
+│   ├── MapView.tsx                   # Actualizado: colores por categor&iacute;a
+│   ├── VenueAutocomplete.tsx         # Refactorizado desde AddressAutocomplete
+│   ├── CategorySelector.tsx          # NUEVO
+│   ├── VenueCard.tsx                 # NUEVO
+│   └── ui/                           # Shadcn (sin cambios)
+├── lib/
+│   ├── tsp.ts                        # MODIFICADO: peso isFeatured
+│   ├── routing.ts                    # SIN CAMBIOS
+│   ├── geocoding.ts                  # SIN CAMBIOS
+│   ├── venue.ts                      # NUEVO
+│   ├── venues-data.ts                # NUEVO: cat&aacute;logo local
+│   ├── overpass.ts                   # NUEVO: Overpass API
+│   ├── useLocalStorage.ts            # SIN CAMBIOS
+│   └── utils.ts                      # SIN CAMBIOS</code></pre>
+
+    <hr>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 3: INTEGRACIÓN DE IA -->
+    <!-- ============================================================ -->
+    <h2 id="integracion-ia">3. Integraci&oacute;n de IA (20%)</h2>
+
+    <h3>3.1 Flujo Multi-Agente</h3>
+    <p>Cada tarea de desarrollo sigue este proceso, documentado en el chat:</p>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart LR
+    A["📋 Tarea"] --> B["🏗️ Arquitecto<br/>Diseña interfaces y UX"]
+    B --> C["💻 Programador<br/>Genera código modular"]
+    C --> D["🔍 Auditor Crítico<br/>Revisa bugs y tipado"]
+    D --> E{"¿Todo OK?"}
+    E -->|"Sí"| F["✅ Merge a develop"]
+    E -->|"No"| B
+      </div>
+    </div>
+
+    <h3>3.2 Checklist de Validaci&oacute;n del Auditor</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Check</th><th>Descripci&oacute;n</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>✅ <code>'use client'</code></td><td>Componentes interactivos tienen la directiva correcta</td></tr>
+        <tr><td>2</td><td>✅ TypeScript strict</td><td>Sin <code>any</code>, sin <code>@ts-ignore</code>, tipos exportados</td></tr>
+        <tr><td>3</td><td>✅ Shadcn imports</td><td>Importaciones desde <code>@/components/ui/</code></td></tr>
+        <tr><td>4</td><td>✅ Tailwind classes</td><td>Sin clases inline de estilo raw</td></tr>
+        <tr><td>5</td><td>✅ TSP intacto</td><td>El algoritmo base no se rompe, solo se a&ntilde;ade peso</td></tr>
+        <tr><td>6</td><td>✅ localStorage migration</td><td>Datos antiguos no rompen la app</td></tr>
+        <tr><td>7</td><td>✅ MapLibre compat</td><td>Coordenadas en formato <code>[lng, lat]</code></td></tr>
+        <tr><td>8</td><td>✅ Overpass rate limit</td><td>1 req/s, con debounce</td></tr>
+        <tr><td>9</td><td>✅ Responsive</td><td>Sidebar funciona en desktop y mobile</td></tr>
+        <tr><td>10</td><td>✅ Sin API keys hardcodeadas</td><td>Claves en <code>.env.local</code> si se usan</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.3 Template de Prompt para cada Tarea</h3>
+    <pre><code>## Tarea: [nombre]
+## Rol: [Arquitecto | Programador | Auditor]
+
+### Contexto
+- Proyecto: RouteWise (App de Ocio/Gastronom&iacute;a)
+- Stack: Next.js 14, TypeScript, Tailwind, Shadcn, MapLibre
+- Archivos relevantes: [lista]
+
+### Requisitos
+[lista de requisitos]
+
+### Restricciones
+- TypeScript strict mode
+- No modificar routing.ts ni geocoding.ts
+- Reutilizar componentes Shadcn existentes (Card, Badge, Button, ScrollArea)
+- Coordenadas en formato [lng, lat] para MapLibre
+- Overpass API con debounce de 300ms</code></pre>
+
+    <hr>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 4: ORGANIZACIÓN GITHUB -->
+    <!-- ============================================================ -->
+    <h2 id="organizacion-github">4. Organizaci&oacute;n GitHub</h2>
+
+    <h3>4.1 Estructura de Branches</h3>
+    <pre><code>main                        # Producci&oacute;n (protegida)
+├── develop                 # Integraci&oacute;n continua
+│   ├── feature/domain-model          # venue.ts + tipos
+│   ├── feature/venue-list            # VenueList + VenueCard
+│   ├── feature/category-selector     # CategorySelector
+│   ├── feature/venue-autocomplete    # VenueAutocomplete + Overpass
+│   ├── feature/tsp-weighted          # Peso isFeatured en TSP
+│   ├── feature/map-categories        # Colores por categor&iacute;a en mapa
+│   ├── feature/local-catalog         # Cat&aacute;logo local de ejemplo
+│   ├── feature/storage-migration     # Migraci&oacute;n localStorage
+│   └── feature/readme-update         # Documentaci&oacute;n
+├── release/v1.0.0
+└── hotfix/*</code></pre>
+
+    <h3>4.2 Flujo de Trabajo</h3>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart LR
+    subgraph Develop["🌿 develop"]
+        D1["feature/domain-model"] --> D2["feature/venue-list"]
+        D2 --> D3["feature/category-selector"]
+        D3 --> D4["feature/venue-autocomplete"]
+        D4 --> D5["feature/tsp-weighted"]
+        D5 --> D6["feature/map-categories"]
+        D6 --> D7["feature/local-catalog"]
+        D7 --> D8["feature/storage-migration"]
+    end
+    
+    D8 --> RC["🔀 release/v1.0.0"]
+    RC --> MAIN["✅ main (v1.0.0)"]
+      </div>
+    </div>
+
+    <h3>4.3 Convenci&oacute;n de Commits</h3>
+    <p>Formato: <code>[#issue] - Verbo [scope]: mensaje</code></p>
+    <pre><code>[#1] - Crear Venue type y VenueCategory enum
+[#2] - Crear VenueList y VenueCard components
+[#3] - A&ntilde;adir CategorySelector con restaurant/bar/nightclub
+[#4] - Implementar VenueAutocomplete con Overpass API
+[#5] - A&ntilde;adir weighted distance para featured venues en TSP
+[#6] - Colorear marcadores del mapa por categor&iacute;a de venue
+[#7] - A&ntilde;adir cat&aacute;logo local de venues para demo
+[#8] - Migrar localStorage de Stop a Venue schema
+[#9] - Actualizar README con descripci&oacute;n de gastro/leisure app</code></pre>
+
+    <hr>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 5: PLAN DE IMPLEMENTACIÓN -->
+    <!-- ============================================================ -->
+    <h2 id="plan-implementacion">5. Plan de Implementaci&oacute;n</h2>
+
+    <h3>Fase 1: Modelo de Datos y Tipos</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Tarea</th><th>Archivos</th><th>Dependencias</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1.1</td><td>Crear <code>venue.ts</code> con tipos del dominio</td><td><span class="file-path">src/lib/venue.ts</span> (nuevo)</td><td>&mdash;</td></tr>
+        <tr><td>1.2</td><td>Crear <code>venues-data.ts</code> con cat&aacute;logo local</td><td><span class="file-path">src/lib/venues-data.ts</span> (nuevo)</td><td>1.1</td></tr>
+        <tr><td>1.3</td><td>Crear <code>overpass.ts</code> con cliente Overpass API</td><td><span class="file-path">src/lib/overpass.ts</span> (nuevo)</td><td>1.1</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Fase 2: Refactor de Componentes</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Tarea</th><th>Archivos</th><th>Dependencias</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>2.1</td><td>Refactor <code>tsp.ts</code>: a&ntilde;adir <code>weightedDistance</code> y <code>TSPConfig</code></td><td><span class="file-path">src/lib/tsp.ts</span></td><td>1.1</td></tr>
+        <tr><td>2.2</td><td>Refactor <code>Sidebar.tsx</code>: <code>Stop</code> &rarr; <code>Venue</code></td><td><span class="file-path">src/components/Sidebar.tsx</span></td><td>1.1, 2.1</td></tr>
+        <tr><td>2.3</td><td>Renombrar <code>StopList.tsx</code> &rarr; <code>VenueList.tsx</code> con categor&iacute;as</td><td><span class="file-path">src/components/VenueList.tsx</span></td><td>1.1</td></tr>
+        <tr><td>2.4</td><td>Crear <code>VenueCard.tsx</code> con badge <code>isFeatured</code></td><td><span class="file-path">src/components/VenueCard.tsx</span></td><td>1.1</td></tr>
+        <tr><td>2.5</td><td>Crear <code>CategorySelector.tsx</code></td><td><span class="file-path">src/components/CategorySelector.tsx</span></td><td>1.1</td></tr>
+        <tr><td>2.6</td><td>Refactor <code>AddressAutocomplete</code> &rarr; <code>VenueAutocomplete</code></td><td><span class="file-path">src/components/VenueAutocomplete.tsx</span></td><td>1.1, 1.2, 1.3</td></tr>
+        <tr><td>2.7</td><td>Refactor <code>MapView.tsx</code>: colores por categor&iacute;a</td><td><span class="file-path">src/components/MapView.tsx</span></td><td>1.1</td></tr>
+        <tr><td>2.8</td><td>Refactor <code>page.tsx</code>: migraci&oacute;n localStorage + tipos</td><td><span class="file-path">src/app/page.tsx</span></td><td>1.1, 2.2</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Fase 3: Pulido y Documentaci&oacute;n</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Tarea</th><th>Archivos</th><th>Dependencias</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>3.1</td><td>Actualizar <code>layout.tsx</code> metadata</td><td><span class="file-path">src/app/layout.tsx</span></td><td>&mdash;</td></tr>
+        <tr><td>3.2</td><td>Actualizar <code>README.md</code></td><td><span class="file-path">README.md</span></td><td>&mdash;</td></tr>
+        <tr><td>3.3</td><td>Verificar build y lint</td><td>&mdash;</td><td>Todas</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Orden de Implementaci&oacute;n Recomendado</h3>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart LR
+    F1["Fase 1<br/>Modelo de datos"] --> F2A["Fase 2A<br/>TSP + Sidebar"]
+    F2A --> F2B["Fase 2B<br/>VenueList + VenueCard"]
+    F2B --> F2C["Fase 2C<br/>CategorySelector + VenueAutocomplete"]
+    F2C --> F2D["Fase 2D<br/>MapView + page.tsx"]
+    F2D --> F3["Fase 3<br/>Documentaci&oacute;n"]
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>RESUMEN DE ARCHIVOS A MODIFICAR/CREAR</h2>
+    <table>
+      <thead>
+        <tr><th>Acci&oacute;n</th><th>Archivo</th><th>Descripci&oacute;n</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>CREAR</strong></td><td><span class="file-path">src/lib/venue.ts</span></td><td>Tipos del dominio (Venue, VenueCategory, etc.)</td></tr>
+        <tr><td><strong>CREAR</strong></td><td><span class="file-path">src/lib/venues-data.ts</span></td><td>Cat&aacute;logo local de 15 locales de ejemplo</td></tr>
+        <tr><td><strong>CREAR</strong></td><td><span class="file-path">src/lib/overpass.ts</span></td><td>Cliente Overpass API para b&uacute;squeda de locales</td></tr>
+        <tr><td><strong>CREAR</strong></td><td><span class="file-path">src/components/CategorySelector.tsx</span></td><td>Selector de categor&iacute;as (Restaurante/Bar/Discoteca)</td></tr>
+        <tr><td><strong>CREAR</strong></td><td><span class="file-path">src/components/VenueCard.tsx</span></td><td>Card individual de local con badge destacado</td></tr>
+        <tr><td><strong>MODIFICAR</strong></td><td><span class="file-path">src/lib/tsp.ts</span></td><td>A&ntilde;adir <code>weightedDistance</code> y <code>TSPConfig</code></td></tr>
+        <tr><td><strong>RENOMBRAR</strong></td><td><span class="file-path">src/components/StopList.tsx</span> &rarr; <code>VenueList.tsx</code></td><td>Refactor con categor&iacute;as</td></tr>
+        <tr><td><strong>RENOMBRAR</strong></td><td><span class="file-path">src/components/AddressAutocomplete.tsx</span> &rarr; <code>VenueAutocomplete.tsx</code></td><td>B&uacute;squeda de locales</td></tr>
+        <tr><td><strong>MODIFICAR</strong></td><td><span class="file-path">src/components/Sidebar.tsx</span></td><td><code>Stop</code> &rarr; <code>Venue</code>, a&ntilde;adir CategorySelector</td></tr>
+        <tr><td><strong>MODIFICAR</strong></td><td><span class="file-path">src/components/MapView.tsx</span></td><td>Colores por categor&iacute;a, popups con iconos</td></tr>
+        <tr><td><strong>MODIFICAR</strong></td><td><span class="file-path">src/app/page.tsx</span></td><td>Migraci&oacute;n localStorage, tipos Venue</td></tr>
+        <tr><td><strong>MODIFICAR</strong></td><td><span class="file-path">src/app/layout.tsx</span></td><td>Metadata actualizada</td></tr>
+        <tr><td><strong>MODIFICAR</strong></td><td><span class="file-path">README.md</span></td><td>Documentaci&oacute;n del proyecto</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</body>
+</html>
