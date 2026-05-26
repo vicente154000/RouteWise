@@ -31,6 +31,31 @@ export interface RouteResult {
 }
 
 /**
+ * Configuration for the TSP optimizer.
+ * @param featuredWeight - Multiplier applied to distance for featured venues (default: 0.7).
+ *   Values < 1 make featured venues "closer" (more likely to be prioritized).
+ *   Values > 1 make featured venues "farther" (less likely to be prioritized).
+ */
+export interface TSPConfig {
+  featuredWeight?: number;
+}
+
+/**
+ * A stop that may include an `isFeatured` flag for weighted TSP optimization.
+ * This is a superset of `Stop` used when venues have featured status.
+ */
+export interface FeaturedStop extends Stop {
+  isFeatured?: boolean;
+}
+
+/**
+ * Default TSP configuration.
+ */
+const DEFAULT_TSP_CONFIG: Required<TSPConfig> = {
+  featuredWeight: 0.7,
+};
+
+/**
  * Calculate the Haversine distance between two coordinates in kilometers.
  */
 export function haversineDistance(a: Coordinate, b: Coordinate): number {
@@ -60,24 +85,51 @@ export function totalDistance(coords: Coordinate[]): number {
 }
 
 /**
- * Nearest Neighbor heuristic for TSP.
+ * Calculate weighted distance between two stops.
+ * If the destination stop is featured, the distance is multiplied by `featuredWeight`
+ * (default 0.7), making it more likely to be visited sooner by the TSP algorithm.
+ *
+ * @param from - Origin coordinate
+ * @param to - Destination stop (may include isFeatured flag)
+ * @param config - TSP configuration (optional)
  */
-export function nearestNeighbor(stops: Stop[]): Stop[] {
+export function weightedDistance(
+  from: Coordinate,
+  to: FeaturedStop,
+  config?: TSPConfig,
+): number {
+  const rawDist = haversineDistance(from, to.coordinates);
+  const { featuredWeight } = { ...DEFAULT_TSP_CONFIG, ...config };
+
+  if (to.isFeatured) {
+    return rawDist * featuredWeight;
+  }
+  return rawDist;
+}
+
+/**
+ * Nearest Neighbor heuristic for TSP.
+ * Supports weighted distance for featured venues via TSPConfig.
+ */
+export function nearestNeighbor(
+  stops: FeaturedStop[],
+  config?: TSPConfig,
+): FeaturedStop[] {
   if (stops.length <= 2) return [...stops];
 
   const visited = new Set<string>();
-  const result: Stop[] = [];
+  const result: FeaturedStop[] = [];
   let current = stops[0];
   result.push(current);
   visited.add(current.id);
 
   while (visited.size < stops.length) {
-    let nearest: Stop | null = null;
+    let nearest: FeaturedStop | null = null;
     let nearestDist = Infinity;
 
     for (const stop of stops) {
       if (visited.has(stop.id)) continue;
-      const dist = haversineDistance(current.coordinates, stop.coordinates);
+      const dist = weightedDistance(current.coordinates, stop, config);
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = stop;
@@ -96,13 +148,27 @@ export function nearestNeighbor(stops: Stop[]): Stop[] {
 
 /**
  * 2-opt local search improvement for TSP.
+ * Supports weighted distance for featured venues via TSPConfig.
  */
-export function twoOpt(stops: Stop[]): Stop[] {
+export function twoOpt(
+  stops: FeaturedStop[],
+  config?: TSPConfig,
+): FeaturedStop[] {
   if (stops.length <= 3) return [...stops];
 
   let improved = true;
   let bestRoute = [...stops];
-  let bestDist = totalDistance(bestRoute.map((s) => s.coordinates));
+
+  // Use weighted distance for total route cost
+  const routeCost = (route: FeaturedStop[]): number => {
+    let cost = 0;
+    for (let i = 0; i < route.length - 1; i++) {
+      cost += weightedDistance(route[i].coordinates, route[i + 1], config);
+    }
+    return cost;
+  };
+
+  let bestCost = routeCost(bestRoute);
 
   while (improved) {
     improved = false;
@@ -110,11 +176,11 @@ export function twoOpt(stops: Stop[]): Stop[] {
     for (let i = 1; i < bestRoute.length - 1; i++) {
       for (let k = i + 1; k < bestRoute.length; k++) {
         const newRoute = twoOptSwap(bestRoute, i, k);
-        const newDist = totalDistance(newRoute.map((s) => s.coordinates));
+        const newCost = routeCost(newRoute);
 
-        if (newDist < bestDist) {
+        if (newCost < bestCost) {
           bestRoute = newRoute;
-          bestDist = newDist;
+          bestCost = newCost;
           improved = true;
         }
       }
@@ -124,7 +190,7 @@ export function twoOpt(stops: Stop[]): Stop[] {
   return bestRoute;
 }
 
-function twoOptSwap(route: Stop[], i: number, k: number): Stop[] {
+function twoOptSwap(route: FeaturedStop[], i: number, k: number): FeaturedStop[] {
   const before = route.slice(0, i);
   const segment = route.slice(i, k);
   const after = route.slice(k);
@@ -133,11 +199,15 @@ function twoOptSwap(route: Stop[], i: number, k: number): Stop[] {
 
 /**
  * Full optimization pipeline: Nearest Neighbor + 2-opt refinement.
+ * Supports weighted distance for featured venues via TSPConfig.
  */
-export function optimizeRoute(stops: Stop[]): Stop[] {
+export function optimizeRoute(
+  stops: FeaturedStop[],
+  config?: TSPConfig,
+): FeaturedStop[] {
   if (stops.length <= 2) return [...stops];
-  const nnRoute = nearestNeighbor(stops);
-  return twoOpt(nnRoute);
+  const nnRoute = nearestNeighbor(stops, config);
+  return twoOpt(nnRoute, config);
 }
 
 /**
@@ -145,10 +215,10 @@ export function optimizeRoute(stops: Stop[]): Stop[] {
  * Assumes start time is 08:00 and each stop takes 10 minutes.
  */
 export function computeArrivalTimes(
-  route: Stop[],
+  route: FeaturedStop[],
   segments: RouteSegment[],
-  startTime: string = "08:00"
-): Stop[] {
+  startTime: string = "08:00",
+): FeaturedStop[] {
   if (route.length === 0) return route;
 
   const [startHours, startMinutes] = startTime.split(":").map(Number);
@@ -163,7 +233,7 @@ export function computeArrivalTimes(
     const hours = Math.floor(currentSeconds / 3600);
     const minutes = Math.floor((currentSeconds % 3600) / 60);
     const estimatedArrival = `${String(hours).padStart(2, "0")}:${String(
-      minutes
+      minutes,
     ).padStart(2, "0")}`;
 
     // Add stop duration (except for last stop)
