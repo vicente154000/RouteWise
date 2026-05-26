@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { Stop, Coordinate } from "@/lib/tsp";
+import type { Venue, Coordinate } from "@/lib/venue";
 import { reverseGeocode } from "@/lib/geocoding";
 import { Loader2 } from "lucide-react";
 
@@ -11,10 +11,10 @@ import { Loader2 } from "lucide-react";
 const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 interface MapViewProps {
-  stops: Stop[];
-  optimizedRoute: Stop[];
+  stops: Venue[];
+  optimizedRoute: Venue[];
   routeGeometry: Coordinate[];
-  onAddStop: (stop: Stop) => void;
+  onAddStop: (stop: Venue) => void;
 }
 
 export default function MapView({
@@ -90,20 +90,26 @@ export default function MapView({
         const displayAddress =
           address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
-        const newStop: Stop = {
+        const newVenue: Venue = {
           id: crypto.randomUUID(),
+          name: displayAddress.split(",")[0].trim(),
           address: displayAddress,
           coordinates: coords,
+          category: "restaurant",
+          isFeatured: false,
         };
 
-        onAddStop(newStop);
+        onAddStop(newVenue);
       } catch {
-        const newStop: Stop = {
+        const newVenue: Venue = {
           id: crypto.randomUUID(),
+          name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
           address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
           coordinates: { lat, lng },
+          category: "restaurant",
+          isFeatured: false,
         };
-        onAddStop(newStop);
+        onAddStop(newVenue);
       } finally {
         setIsReversing(false);
       }
@@ -153,6 +159,9 @@ export default function MapView({
         <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4;">
           <p style="font-weight: 600; margin: 0 0 2px 0;">
             <span style="color: #6b7280;">Parada #${index + 1}</span>
+          </p>
+          <p style="font-weight: 500; margin: 0 0 2px 0; font-size: 13px;">
+            ${stop.name}
           </p>
           <p style="color: #6b7280; font-size: 12px; margin: 0 0 4px 0;">
             ${stop.address}

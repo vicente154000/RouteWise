@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
-import type { Stop, Coordinate } from "@/lib/tsp";
+import type { Venue, Coordinate } from "@/lib/venue";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 
 // Dynamic import of MapView with SSR disabled (Leaflet needs window)
@@ -20,8 +20,8 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 });
 
 export default function Home() {
-  const [stops, setStops] = useLocalStorage<Stop[]>("routewise-stops", []);
-  const [optimizedRoute, setOptimizedRoute] = useLocalStorage<Stop[]>(
+  const [stops, setStops] = useLocalStorage<Venue[]>("routewise-stops", []);
+  const [optimizedRoute, setOptimizedRoute] = useLocalStorage<Venue[]>(
     "routewise-optimized",
     []
   );
@@ -35,7 +35,7 @@ export default function Home() {
   );
 
   const handleAddStop = useCallback(
-    (stop: Stop) => {
+    (stop: Venue) => {
       setStops((prev) => [...prev, stop]);
       if (isOptimized) {
         setOptimizedRoute([]);

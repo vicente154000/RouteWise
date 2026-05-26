@@ -15,17 +15,17 @@ import {
   Clock,
 } from "lucide-react";
 import AddressAutocomplete from "./AddressAutocomplete";
-import StopList from "./StopList";
-import type { Stop, Coordinate } from "@/lib/tsp";
+import VenueList from "./VenueList";
+import type { Venue, Coordinate } from "@/lib/venue";
 import type { Suggestion } from "@/lib/geocoding";
 import { optimizeRoute, totalDistance, computeArrivalTimes } from "@/lib/tsp";
 import { getFullRoute } from "@/lib/routing";
 
 interface SidebarProps {
-  stops: Stop[];
-  setStops: React.Dispatch<React.SetStateAction<Stop[]>>;
-  optimizedRoute: Stop[];
-  setOptimizedRoute: React.Dispatch<React.SetStateAction<Stop[]>>;
+  stops: Venue[];
+  setStops: React.Dispatch<React.SetStateAction<Venue[]>>;
+  optimizedRoute: Venue[];
+  setOptimizedRoute: React.Dispatch<React.SetStateAction<Venue[]>>;
   setRouteGeometry: React.Dispatch<React.SetStateAction<Coordinate[]>>;
   isOptimized: boolean;
   setIsOptimized: React.Dispatch<React.SetStateAction<boolean>>;
@@ -48,13 +48,16 @@ export default function Sidebar({
   const [roadDuration, setRoadDuration] = useState<number | null>(null);
 
   const handleSelectSuggestion = (suggestion: Suggestion) => {
-    const newStop: Stop = {
+    const newVenue: Venue = {
       id: crypto.randomUUID(),
+      name: suggestion.displayName.split(",")[0].trim(),
       address: suggestion.displayName,
       coordinates: suggestion.coordinates,
+      category: "restaurant",
+      isFeatured: false,
     };
 
-    setStops((prev) => [...prev, newStop]);
+    setStops((prev) => [...prev, newVenue]);
     setAddress("");
 
     if (isOptimized) {
@@ -104,7 +107,7 @@ export default function Sidebar({
 
     try {
       // 1. Optimize the order of stops (TSP)
-      const optimized = optimizeRoute(stops);
+      const optimized = optimizeRoute(stops) as Venue[];
 
       // 2. Fetch the road route from OSRM
       const coords = optimized.map((s) => s.coordinates);
@@ -115,7 +118,7 @@ export default function Sidebar({
         const routeWithTimes = computeArrivalTimes(
           optimized,
           routeResult.segments
-        );
+        ) as Venue[];
 
         setOptimizedRoute(routeWithTimes);
         setRouteGeometry(routeResult.fullGeometry);
@@ -159,7 +162,7 @@ export default function Sidebar({
         const deadline = s.timeWindow?.deadline
           ? ` (límite: ${s.timeWindow.deadline})`
           : "";
-        return `${i + 1}. ${s.address}${arrival}${deadline}`;
+        return `${i + 1}. ${s.name} - ${s.address}${arrival}${deadline}`;
       })
       .join("\n");
 
@@ -186,7 +189,7 @@ export default function Sidebar({
           <h2 className="text-lg font-bold text-foreground">RouteWise</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Optimizador de rutas de reparto
+          Itinerarios de ocio y gastronomía
         </p>
       </div>
 
@@ -219,10 +222,10 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Stop list */}
+      {/* Venue list */}
       <div className="flex-1 px-4 pb-2 min-h-0 overflow-hidden">
-        <StopList
-          stops={stops}
+        <VenueList
+          venues={stops}
           optimizedRoute={optimizedRoute}
           onRemove={handleRemoveStop}
           onUpdateDeadline={handleUpdateDeadline}
