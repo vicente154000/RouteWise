@@ -1,6 +1,18 @@
 import type { Coordinate, RouteResult, RouteSegment } from "./tsp";
 
-const OSRM_URL = "https://router.project-osrm.org";
+/**
+ * OSRM base URL.
+ *
+ * Priority:
+ * 1. NEXT_PUBLIC_OSRM_BASE_URL env var (for Docker/local OSRM)
+ * 2. Public OSRM demo server (fallback)
+ *
+ * In production (Docker), this is set via docker-compose.yml.
+ * For local dev, create .env.local with:
+ *   NEXT_PUBLIC_OSRM_BASE_URL=http://localhost:5000
+ */
+const OSRM_URL =
+  process.env.NEXT_PUBLIC_OSRM_BASE_URL || "https://router.project-osrm.org";
 
 /**
  * Decode an OSRM polyline (encoded polyline5 format) into an array of coordinates.

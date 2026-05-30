@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# OSRM data (large binary files, downloaded + processed locally)
+/data/
+
 # vercel
 .vercel
 
