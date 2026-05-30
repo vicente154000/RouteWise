@@ -31,6 +31,7 @@ interface VenueCardProps {
 /**
  * Individual venue card displayed in the venue list.
  * Shows category icon, featured badge, name, address, and time info.
+ * The left border color indicates the venue category (green=restaurant, blue=bar, purple=nightclub).
  */
 export default function VenueCard({
   venue,
@@ -46,7 +47,10 @@ export default function VenueCard({
   const categoryLabel = VENUE_CATEGORY_LABELS[venue.category];
 
   return (
-    <div className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 hover:bg-accent/50 transition-colors">
+    <div
+      className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 hover:bg-accent/50 transition-colors"
+      style={{ borderLeftColor: categoryColor, borderLeftWidth: 3 }}
+    >
       {/* Main row */}
       <div className="flex items-center gap-2">
         {/* Drag handle */}
@@ -84,7 +88,8 @@ export default function VenueCard({
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+            <MapPin className="h-3 w-3 shrink-0" />
             {venue.address}
           </p>
         </div>
