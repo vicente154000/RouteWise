@@ -4,6 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Venue, Coordinate } from "@/lib/venue";
+import {
+  VENUE_CATEGORY_COLORS,
+  VENUE_CATEGORY_ICONS,
+  VENUE_CATEGORY_LABELS,
+} from "@/lib/venue";
 import { reverseGeocode } from "@/lib/geocoding";
 import { Loader2 } from "lucide-react";
 
@@ -132,55 +137,60 @@ export default function MapView({
     markersRef.current = [];
 
     // Add new markers
-    routeToShow.forEach((stop, index) => {
-      const isStart = index === 0;
-      const isEnd = index === routeToShow.length - 1;
-      const color = isStart ? "#22c55e" : isEnd ? "#ef4444" : "#3b82f6";
+    routeToShow.forEach((venue, index) => {
+      const categoryColor = VENUE_CATEGORY_COLORS[venue.category];
+      const categoryIcon = VENUE_CATEGORY_ICONS[venue.category];
+      const categoryLabel = VENUE_CATEGORY_LABELS[venue.category];
+      const borderColor = venue.isFeatured ? "#fbbf24" : "white";
+      const borderWidth = venue.isFeatured ? "3px" : "2px";
+      const markerSize = venue.isFeatured ? "32px" : "28px";
 
       const el = document.createElement("div");
       el.className = "custom-marker";
       el.innerHTML = `<div style="
-        background: ${color};
+        background: ${categoryColor};
         color: white;
-        width: 28px;
-        height: 28px;
+        width: ${markerSize};
+        height: ${markerSize};
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: bold;
-        border: 3px solid white;
+        border: ${borderWidth} solid ${borderColor};
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         cursor: pointer;
-      ">${index + 1}</div>`;
+        transition: transform 0.2s;
+      " title="${venue.name}">${index + 1}</div>`;
 
       const popupHtml = `
-        <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4;">
-          <p style="font-weight: 600; margin: 0 0 2px 0;">
-            <span style="color: #6b7280;">Parada #${index + 1}</span>
-          </p>
-          <p style="font-weight: 500; margin: 0 0 2px 0; font-size: 13px;">
-            ${stop.name}
+        <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; max-width: 220px;">
+          <p style="font-weight: 600; margin: 0 0 2px 0; font-size: 14px;">
+            ${venue.name}
           </p>
           <p style="color: #6b7280; font-size: 12px; margin: 0 0 4px 0;">
-            ${stop.address}
+            ${categoryIcon} ${categoryLabel}
+            ${venue.isFeatured ? '<span style="display: inline-block; margin-left: 4px; background: #fef3c7; color: #92400e; font-size: 11px; padding: 0 5px; border-radius: 4px; font-weight: 600;">⭐ Destacado</span>' : ""}
+          </p>
+          <p style="color: #6b7280; font-size: 11px; margin: 0 0 4px 0;">
+            📍 ${venue.address}
           </p>
           ${
-            stop.timeWindow?.estimatedArrival
-              ? `<p style="color: #2563eb; font-weight: 500; margin: 0; font-size: 12px;">🕐 Llegada: ${stop.timeWindow.estimatedArrival}</p>`
+            venue.timeWindow?.estimatedArrival
+              ? `<p style="color: #2563eb; font-weight: 500; margin: 0; font-size: 12px;">🕐 Llegada: ${venue.timeWindow.estimatedArrival}</p>`
               : ""
           }
           ${
-            stop.timeWindow?.deadline
-              ? `<p style="color: #dc2626; font-weight: 500; margin: 0; font-size: 12px;">⏰ Límite: ${stop.timeWindow.deadline}</p>`
+            venue.timeWindow?.deadline
+              ? `<p style="color: #dc2626; font-weight: 500; margin: 0; font-size: 12px;">⏰ Límite: ${venue.timeWindow.deadline}</p>`
               : ""
           }
         </div>
       `;
 
       const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([stop.coordinates.lng, stop.coordinates.lat])
+        .setLngLat([venue.coordinates.lng, venue.coordinates.lat])
         .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(popupHtml))
         .addTo(map.current!);
 
@@ -190,8 +200,8 @@ export default function MapView({
     // Fit bounds
     if (routeToShow.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
-      routeToShow.forEach((s) =>
-        bounds.extend([s.coordinates.lng, s.coordinates.lat])
+      routeToShow.forEach((v) =>
+        bounds.extend([v.coordinates.lng, v.coordinates.lat])
       );
 
       if (routeToShow.length === 1) {
