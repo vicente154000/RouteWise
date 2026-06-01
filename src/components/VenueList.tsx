@@ -3,6 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin } from "lucide-react";
 import type { Venue } from "@/lib/venue";
 import VenueCard from "./VenueCard";
@@ -13,12 +14,13 @@ interface VenueListProps {
   onRemove: (id: string) => void;
   onUpdateDeadline: (id: string, deadline: string) => void;
   isOptimized: boolean;
+  isOptimizing?: boolean;
 }
 
 /**
  * List of venues with drag handles, position numbers, category icons,
  * featured badges, and time window controls.
- * Replaces the old StopList component.
+ * Shows skeleton loaders during optimization.
  */
 export default function VenueList({
   venues,
@@ -26,6 +28,7 @@ export default function VenueList({
   onRemove,
   onUpdateDeadline,
   isOptimized,
+  isOptimizing = false,
 }: VenueListProps) {
   const displayVenues = isOptimized ? optimizedRoute : venues;
 
@@ -63,23 +66,33 @@ export default function VenueList({
 
       <ScrollArea className="flex-1">
         <div className="space-y-1.5 pr-2">
-          {displayVenues.map((venue, index) => {
-            const isStart = index === 0;
-            const isEnd = index === displayVenues.length - 1;
+          {isOptimizing ? (
+            // Skeleton loaders during optimization
+            <>
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </>
+          ) : (
+            // Actual venue cards
+            displayVenues.map((venue, index) => {
+              const isStart = index === 0;
+              const isEnd = index === displayVenues.length - 1;
 
-            return (
-              <VenueCard
-                key={venue.id}
-                venue={venue}
-                index={index}
-                isStart={isStart}
-                isEnd={isEnd}
-                isOptimized={isOptimized}
-                onRemove={onRemove}
-                onUpdateDeadline={onUpdateDeadline}
-              />
-            );
-          })}
+              return (
+                <VenueCard
+                  key={venue.id}
+                  venue={venue}
+                  index={index}
+                  isStart={isStart}
+                  isEnd={isEnd}
+                  isOptimized={isOptimized}
+                  onRemove={onRemove}
+                  onUpdateDeadline={onUpdateDeadline}
+                />
+              );
+            })
+          )}
         </div>
       </ScrollArea>
     </div>

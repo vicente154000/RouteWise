@@ -32,6 +32,7 @@ interface VenueCardProps {
  * Individual venue card displayed in the venue list.
  * Shows category icon, featured badge, name, address, and time info.
  * The left border color indicates the venue category (green=restaurant, blue=bar, purple=nightclub).
+ * Smooth animations on position changes via transition-all.
  */
 export default function VenueCard({
   venue,
@@ -48,7 +49,7 @@ export default function VenueCard({
 
   return (
     <div
-      className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 hover:bg-accent/50 transition-colors"
+      className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 hover:bg-accent/50 transition-all duration-300"
       style={{ borderLeftColor: categoryColor, borderLeftWidth: 3 }}
     >
       {/* Main row */}
@@ -58,7 +59,7 @@ export default function VenueCard({
 
         {/* Position number */}
         <span
-          className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${
+          className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white transition-all duration-300 ${
             isStart
               ? "bg-emerald-500"
               : isEnd
@@ -99,7 +100,7 @@ export default function VenueCard({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0"
             onClick={() => onRemove(venue.id)}
           >
             <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -111,7 +112,7 @@ export default function VenueCard({
       <div className="flex items-center gap-3 pl-8">
         {/* Estimated arrival */}
         {venue.timeWindow?.estimatedArrival && (
-          <div className="flex items-center gap-1 text-xs text-blue-600">
+          <div className="flex items-center gap-1 text-xs text-blue-600 transition-all duration-300">
             <Clock className="h-3 w-3" />
             <span>Llegada: {venue.timeWindow.estimatedArrival}</span>
           </div>
@@ -134,7 +135,7 @@ export default function VenueCard({
 
         {/* Show deadline on optimized route */}
         {isOptimized && venue.timeWindow?.deadline && (
-          <div className="flex items-center gap-1 text-xs text-red-600">
+          <div className="flex items-center gap-1 text-xs text-red-600 transition-all duration-300">
             <Timer className="h-3 w-3" />
             <span>Límite: {venue.timeWindow.deadline}</span>
           </div>

@@ -256,6 +256,7 @@ export default function Sidebar({
           onRemove={handleRemoveStop}
           onUpdateDeadline={handleUpdateDeadline}
           isOptimized={isOptimized}
+          isOptimizing={isOptimizing}
         />
       </div>
 
