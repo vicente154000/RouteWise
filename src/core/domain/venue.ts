@@ -1,9 +1,7 @@
 export type Coordinate = { lat: number; lng: number };
 
 export interface TimeWindow {
-  /** Estimated arrival time (HH:MM) set after route optimization */
   estimatedArrival?: string;
-  /** Deadline time (HH:MM) optionally set by the user */
   deadline?: string;
 }
 
@@ -35,18 +33,4 @@ export interface Venue {
   category: VenueCategory;
   isFeatured: boolean;
   timeWindow?: TimeWindow;
-}
-
-export interface UserPreferences {
-  categories: VenueCategory[];
-  startTime: string;
-}
-
-export interface Itinerary {
-  id: string;
-  venues: Venue[];
-  totalDistance: number;
-  totalDuration: number;
-  geometry: Coordinate[];
-  createdAt: string;
 }

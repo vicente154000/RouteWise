@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import type { Venue, Coordinate } from "@/lib/venue";
-import {
-  VENUE_CATEGORY_COLORS,
-  VENUE_CATEGORY_ICONS,
+import maplibre, { Map, Marker, Popup, LngLatBounds } from "maplibre-gl";
+import { 
+  VENUE_CATEGORY_ICONS, 
+  VENUE_CATEGORY_COLORS, 
   VENUE_CATEGORY_LABELS,
-} from "@/lib/venue";
-import { reverseGeocode } from "@/lib/geocoding";
+  Venue, 
+  Coordinate 
+} from "@/core/domain/venue";
+import { NominatimGeocodingAdapter } from "@/core/infrastructure/NominatimGeocodingAdapter";
 import { Loader2 } from "lucide-react";
 
-// Free tile source: OpenFreeMap - vector tiles, fast and free
-const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+// Instanciamos el adaptador de infraestructura de forma local para el mapa
+const geocodingAdapter = new NominatimGeocodingAdapter();
 
 interface MapViewProps {
   stops: Venue[];
@@ -29,231 +29,170 @@ export default function MapView({
   onAddStop,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
-  const [isReversing, setIsReversing] = useState(false);
-  const routeLineRef = useRef<maplibregl.GeoJSONSource | null>(null);
+  const map = useRef<Map | null>(null);
+  const markersRef = useRef<Marker[]>([]);
+  const [isMapLoading, setIsMapLoading] = useState(false);
 
-  const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
-
-  // Initialize map
+  // Inicializar el mapa interactivo una sola vez al montar el componente
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (map.current || !mapContainer.current) return;
 
-    const m = new maplibregl.Map({
+    map.current = new maplibre.Map({
       container: mapContainer.current,
-      style: STYLE_URL,
-      center: [-3.7038, 40.4168], // [lng, lat] - MapLibre uses [lng, lat]
-      zoom: 5,
-      attributionControl: {
-        compact: true,
-      },
+      style: "https://tiles.openfreemap.org/styles/liberty", // Estilo libre y ultra-rápido de OpenFreeMap
+      center: [-3.7038, 40.4168], // Ubicación por defecto: Puerta del Sol, Madrid
+      zoom: 13,
+      attributionControl: false,
     });
 
-    m.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.current.addControl(new maplibre.NavigationControl(), "top-right");
 
-    m.on("load", () => {
-      // Add route line source and layer
-      m.addSource("route-line", {
+    // Evento de clic en el mapa para añadir nuevos locales mediante geocodificación inversa
+    map.current.on("click", async (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      setIsMapLoading(true);
+      try {
+        // Llamada limpia usando el nuevo adaptador estructural en lugar del archivo en /lib
+        const address = await geocodingAdapter.reverseGeocode(lat, lng);
+        
+        const newVenue: Venue = {
+          id: `click-${Date.now()}`,
+          name: `Punto en el mapa`,
+          address: address,
+          coordinates: { lat, lng },
+          category: "restaurant", // Categoría por defecto al clickear directamente
+          isFeatured: false,
+        };
+
+        onAddStop(newVenue);
+      } catch (err) {
+        console.error("Error al añadir parada desde el mapa:", err);
+      } finally {
+        setIsMapLoading(false);
+      }
+    });
+
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, [onAddStop]);
+
+  // Actualizar marcadores y capas de ruta cuando cambien los datos
+  useEffect(() => {
+    if (!map.current) return;
+
+    const mapInstance = map.current;
+
+    // 1. Limpiar marcadores antiguos del mapa
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
+
+    // Determinar qué lista de paradas pintar en el mapa (la optimizada o la lista base)
+    const activeRoute = optimizedRoute.length > 0 ? optimizedRoute : stops;
+
+    // 2. Dibujar nuevos marcadores estilizados por categoría
+    activeRoute.forEach((venue, index) => {
+      const el = document.createElement("div");
+      el.className = "flex items-center justify-center w-8 h-8 rounded-full shadow-lg border-2 border-white cursor-pointer text-base font-bold transition-transform hover:scale-110";
+      el.style.backgroundColor = VENUE_CATEGORY_COLORS[venue.category];
+      el.innerText = VENUE_CATEGORY_ICONS[venue.category];
+
+      // Popup informativo al hacer clic sobre un marcador
+      const popup = new Popup({ offset: 25 }).setHTML(`
+        <div style="font-family: sans-serif; padding: 2px;">
+          <div style="font-weight: bold; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+            <span>${index + 1}. ${venue.name}</span>
+            ${venue.isFeatured ? '<span style="background:#f59e0b; color:white; font-size:9px; padding:1px 4px; border-radius:3px;">⭐</span>' : ""}
+          </div>
+          <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${venue.address}</div>
+          <div style="font-size: 10px; text-transform: uppercase; font-weight: bold; color: ${VENUE_CATEGORY_COLORS[venue.category]};">
+            ${VENUE_CATEGORY_LABELS[venue.category]}
+          </div>
+        </div>
+      `);
+
+      const marker = new Marker({ element: el })
+        .setLngLat([venue.coordinates.lng, venue.coordinates.lat])
+        .setPopup(popup)
+        .addTo(mapInstance);
+
+      markersRef.current.push(marker);
+    });
+
+    // 3. Ajustar el encuadre (Bounding Box) del mapa automáticamente para contener todas las paradas
+    if (activeRoute.length > 0) {
+      const bounds = new LngLatBounds();
+      activeRoute.forEach((v) => bounds.extend([v.coordinates.lng, v.coordinates.lat]));
+      mapInstance.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+    }
+
+    // 4. Dibujar la línea de la trayectoria (Geometría de carreteras OSRM o línea recta)
+    const updateRouteLayer = () => {
+      if (!mapInstance.isStyleLoaded()) return;
+
+      const sourceId = "route-source";
+      const layerId = "route-layer";
+
+      // Eliminar capa y fuente previas si existen
+      if (mapInstance.getLayer(layerId)) mapInstance.removeLayer(layerId);
+      if (mapInstance.getSource(sourceId)) mapInstance.removeSource(sourceId);
+
+      if (routeGeometry.length === 0) return;
+
+      // Transformar coordenadas de la app {lat, lng} a formato geoJSON [lng, lat] de MapLibre
+      const coordinatesGeoJson = routeGeometry.map((c) => [c.lng, c.lat]);
+
+      mapInstance.addSource(sourceId, {
         type: "geojson",
         data: {
           type: "Feature",
           properties: {},
           geometry: {
             type: "LineString",
-            coordinates: [],
+            coordinates: coordinatesGeoJson,
           },
         },
       });
 
-      m.addLayer({
-        id: "route-line-layer",
+      mapInstance.addLayer({
+        id: layerId,
         type: "line",
-        source: "route-line",
+        source: sourceId,
         layout: {
           "line-join": "round",
           "line-cap": "round",
         },
         paint: {
-          "line-color": "#3b82f6",
+          "line-color": "#3b82f6", // Línea azul de ruta
           "line-width": 4,
           "line-opacity": 0.85,
         },
       });
-
-      routeLineRef.current = m.getSource("route-line") as maplibregl.GeoJSONSource;
-    });
-
-    // Click handler
-    m.on("click", async (e) => {
-      const { lng, lat } = e.lngLat;
-      setIsReversing(true);
-
-      try {
-        const coords: Coordinate = { lat, lng };
-        const address = await reverseGeocode(coords);
-        const displayAddress =
-          address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-
-        const newVenue: Venue = {
-          id: crypto.randomUUID(),
-          name: displayAddress.split(",")[0].trim(),
-          address: displayAddress,
-          coordinates: coords,
-          category: "restaurant",
-          isFeatured: false,
-        };
-
-        onAddStop(newVenue);
-      } catch {
-        const newVenue: Venue = {
-          id: crypto.randomUUID(),
-          name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-          address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-          coordinates: { lat, lng },
-          category: "restaurant",
-          isFeatured: false,
-        };
-        onAddStop(newVenue);
-      } finally {
-        setIsReversing(false);
-      }
-    });
-
-    map.current = m;
-
-    return () => {
-      m.remove();
-      map.current = null;
     };
-  }, [onAddStop]);
 
-  // Update markers
-  useEffect(() => {
-    if (!map.current) return;
-
-    // Clear old markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    // Add new markers
-    routeToShow.forEach((venue, index) => {
-      const categoryColor = VENUE_CATEGORY_COLORS[venue.category];
-      const categoryIcon = VENUE_CATEGORY_ICONS[venue.category];
-      const categoryLabel = VENUE_CATEGORY_LABELS[venue.category];
-      const borderColor = venue.isFeatured ? "#fbbf24" : "white";
-      const borderWidth = venue.isFeatured ? "3px" : "2px";
-      const markerSize = venue.isFeatured ? "32px" : "28px";
-
-      const el = document.createElement("div");
-      el.className = "custom-marker";
-      el.innerHTML = `<div style="
-        background: ${categoryColor};
-        color: white;
-        width: ${markerSize};
-        height: ${markerSize};
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: bold;
-        border: ${borderWidth} solid ${borderColor};
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        cursor: pointer;
-        transition: transform 0.2s;
-      " title="${venue.name}">${index + 1}</div>`;
-
-      const popupHtml = `
-        <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; max-width: 220px;">
-          <p style="font-weight: 600; margin: 0 0 2px 0; font-size: 14px;">
-            ${venue.name}
-          </p>
-          <p style="color: #6b7280; font-size: 12px; margin: 0 0 4px 0;">
-            ${categoryIcon} ${categoryLabel}
-            ${venue.isFeatured ? '<span style="display: inline-block; margin-left: 4px; background: #fef3c7; color: #92400e; font-size: 11px; padding: 0 5px; border-radius: 4px; font-weight: 600;">⭐ Destacado</span>' : ""}
-          </p>
-          <p style="color: #6b7280; font-size: 11px; margin: 0 0 4px 0;">
-            📍 ${venue.address}
-          </p>
-          ${
-            venue.timeWindow?.estimatedArrival
-              ? `<p style="color: #2563eb; font-weight: 500; margin: 0; font-size: 12px;">🕐 Llegada: ${venue.timeWindow.estimatedArrival}</p>`
-              : ""
-          }
-          ${
-            venue.timeWindow?.deadline
-              ? `<p style="color: #dc2626; font-weight: 500; margin: 0; font-size: 12px;">⏰ Límite: ${venue.timeWindow.deadline}</p>`
-              : ""
-          }
-        </div>
-      `;
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([venue.coordinates.lng, venue.coordinates.lat])
-        .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(popupHtml))
-        .addTo(map.current!);
-
-      markersRef.current.push(marker);
-    });
-
-    // Fit bounds
-    if (routeToShow.length > 0) {
-      const bounds = new maplibregl.LngLatBounds();
-      routeToShow.forEach((v) =>
-        bounds.extend([v.coordinates.lng, v.coordinates.lat])
-      );
-
-      if (routeToShow.length === 1) {
-        map.current.flyTo({
-          center: [routeToShow[0].coordinates.lng, routeToShow[0].coordinates.lat],
-          zoom: 13,
-        });
-      } else {
-        map.current.fitBounds(bounds, { padding: 50, maxZoom: 15 });
-      }
+    // Asegurar que el estilo esté completamente cargado antes de inyectar las líneas vectoriales
+    if (mapInstance.isStyleLoaded()) {
+      updateRouteLayer();
+    } else {
+      mapInstance.once("styledata", updateRouteLayer);
     }
-  }, [routeToShow]);
-
-  // Update route polyline
-  useEffect(() => {
-    if (!routeLineRef.current) return;
-
-    const coords =
-      routeGeometry.length > 0
-        ? routeGeometry.map((c) => [c.lng, c.lat])
-        : routeToShow.map((s) => [s.coordinates.lng, s.coordinates.lat]);
-
-    routeLineRef.current.setData({
-      type: "Feature",
-      properties: {},
-      geometry: {
-        type: "LineString",
-        coordinates: coords,
-      },
-    });
-  }, [routeGeometry, routeToShow]);
+  }, [stops, optimizedRoute, routeGeometry]);
 
   return (
-    <div className="h-full w-full rounded-lg overflow-hidden border border-border relative">
-      <div ref={mapContainer} className="h-full w-full" />
-
-      {/* Loading overlay when clicking on map */}
-      {isReversing && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-lg px-4 py-2 flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="text-sm text-foreground">
-            Obteniendo dirección...
-          </span>
-        </div>
-      )}
-
-      {/* Hint for click-to-add */}
-      {stops.length === 0 && !isReversing && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-lg px-4 py-2">
-          <p className="text-sm text-muted-foreground">
-            👆 Haz clic en el mapa para añadir una parada
-          </p>
+    <div className="w-full h-full relative">
+      <div ref={mapContainer} className="w-full h-full" />
+      
+      {/* Spinner de carga flotante al realizar acciones pesadas de red */}
+      {isMapLoading && (
+        <div className="absolute inset-0 bg-background/20 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-background border border-border p-3 rounded-xl shadow-xl flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-xs font-medium">Buscando dirección...</span>
+          </div>
         </div>
       )}
     </div>

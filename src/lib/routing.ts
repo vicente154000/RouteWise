@@ -1,4 +1,4 @@
-import type { Coordinate, RouteResult, RouteSegment } from "./tsp";
+import type { Coordinate, RouteResult, RouteSegment } from "../core/domain/tsp";
 
 /**
  * OSRM base URL.

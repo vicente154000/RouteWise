@@ -3,10 +3,10 @@
 import { useCallback } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
-import type { Venue, Coordinate } from "@/lib/venue";
+import { Venue, Coordinate } from "@/core/domain/venue";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 
-// Dynamic import of MapView with SSR disabled (Leaflet needs window)
+// Importación dinámica de MapView para evitar problemas de SSR con librerías de mapas en el navegador
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
   loading: () => (
@@ -48,7 +48,7 @@ export default function Home() {
 
   return (
     <main className="h-screen w-screen flex overflow-hidden bg-background">
-      {/* Sidebar - fixed width on desktop */}
+      {/* Sidebar - Panel de control lateral en Desktop */}
       <aside className="w-full max-w-[380px] min-w-[320px] h-full flex-shrink-0 hidden md:block">
         <Sidebar
           stops={stops}
@@ -61,7 +61,7 @@ export default function Home() {
         />
       </aside>
 
-      {/* Mobile sidebar - bottom sheet */}
+      {/* Mobile Sidebar - Panel flotante para pantallas táctiles/móviles */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 z-[1000]">
         <div className="bg-card border border-border rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
           <Sidebar
@@ -76,7 +76,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Map area */}
+      {/* Sección del visor de mapas interactivo */}
       <section className="flex-1 h-full relative">
         <MapView
           stops={stops}

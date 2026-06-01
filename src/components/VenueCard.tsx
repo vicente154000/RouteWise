@@ -11,12 +11,12 @@ import {
   Star,
   MapPin,
 } from "lucide-react";
-import type { Venue } from "@/lib/venue";
+import type { Venue } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
   VENUE_CATEGORY_COLORS,
-} from "@/lib/venue";
+} from "@/core/domain/venue";
 
 interface VenueCardProps {
   venue: Venue;
