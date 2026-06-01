@@ -96,27 +96,18 @@ export async function getRoute(
 
 /**
  * Get the full road route for a sequence of ordered stops.
- * Fetches all segments in parallel and returns the combined result.
+ * Fetches each segment sequentially and returns the combined result.
  */
 export async function getFullRoute(stops: Coordinate[]): Promise<RouteResult | null> {
   if (stops.length < 2) return null;
-
-  // Build all segment promises
-  const segmentPromises: Promise<RouteSegment | null>[] = [];
-  for (let i = 0; i < stops.length - 1; i++) {
-    segmentPromises.push(getRoute(stops[i], stops[i + 1]));
-  }
-
-  // Execute all requests in parallel
-  const results = await Promise.allSettled(segmentPromises);
 
   const segments: RouteSegment[] = [];
   let totalDistance = 0;
   let totalDuration = 0;
   const fullGeometry: Coordinate[] = [];
 
-  results.forEach((result, i) => {
-    const segment = result.status === "fulfilled" ? result.value : null;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const segment = await getRoute(stops[i], stops[i + 1]);
 
     if (segment) {
       segments.push(segment);
@@ -149,7 +140,7 @@ export async function getFullRoute(stops: Coordinate[]): Promise<RouteResult | n
         fullGeometry.push(stops[i], stops[i + 1]);
       }
     }
-  });
+  }
 
   return {
     segments,
