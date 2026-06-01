@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -12,6 +13,8 @@ import {
   Navigation,
   Trash2,
   Clock,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 import { VenueAutocomplete } from "./VenueAutocomplete";
@@ -45,6 +48,8 @@ export default function Sidebar({
   isOptimized,
   setIsOptimized,
 }: SidebarProps) {
+  const { theme, setTheme } = useTheme();
+  const [address, setAddress] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,15 +105,17 @@ export default function Sidebar({
     setError(null);
 
     try {
-      // Envoltura limpia: Se invoca al servicio exigido por los requerimientos de la Issue
-      const optimized = routeOptimizer.optimize(stops);
-
-      // Obtener trayectorias reales de OSRM por carretera
+      const optimized = optimizeRoute(stops) as Venue[];
       const coords = optimized.map((s) => s.coordinates);
       const routeResult = await getFullRoute(coords);
 
       if (routeResult) {
-        setOptimizedRoute(optimized);
+        const routeWithTimes = computeArrivalTimes(
+          optimized,
+          routeResult.segments
+        ) as Venue[];
+
+        setOptimizedRoute(routeWithTimes);
         setRouteGeometry(routeResult.fullGeometry);
         setRoadDistance(routeResult.totalDistance);
         setRoadDuration(routeResult.totalDuration);
@@ -155,6 +162,10 @@ export default function Sidebar({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleToggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -164,9 +175,24 @@ export default function Sidebar({
   return (
     <div className="h-full flex flex-col bg-card border-r border-border">
       <div className="p-4 pb-2">
-        <div className="flex items-center gap-2 mb-1">
-          <Navigation className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold text-foreground">RouteWise</h2>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2">
+            <Navigation className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">RouteWise</h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleToggleTheme}
+            title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            className="h-8 w-8"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            )}
+          </Button>
         </div>
         <p className="text-xs text-muted-foreground">
           Itinerarios de ocio y gastronomía inteligentes

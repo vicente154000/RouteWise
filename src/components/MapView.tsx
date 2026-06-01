@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import maplibre, { Map, Marker, Popup, LngLatBounds } from "maplibre-gl";
-import { 
-  VENUE_CATEGORY_ICONS, 
-  VENUE_CATEGORY_COLORS, 
+import { useTheme } from "next-themes";
+import { useState } from "react";
+import Map, { Marker, Popup } from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
+import type { Venue, Coordinate } from "@/lib/venue";
+import {
+  VENUE_CATEGORY_COLORS,
+  VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
   Venue, 
   Coordinate 
@@ -12,8 +15,10 @@ import {
 import { NominatimGeocodingAdapter } from "@/core/infrastructure/NominatimGeocodingAdapter";
 import { Loader2 } from "lucide-react";
 
-// Instanciamos el adaptador de infraestructura de forma local para el mapa
-const geocodingAdapter = new NominatimGeocodingAdapter();
+const STYLE_URLS = {
+  light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+};
 
 interface MapViewProps {
   stops: Venue[];
@@ -22,126 +27,182 @@ interface MapViewProps {
   onAddStop: (stop: Venue) => void;
 }
 
+interface PopupInfo {
+  lng: number;
+  lat: number;
+  venue: Venue;
+  index: number;
+}
+
 export default function MapView({
   stops,
   optimizedRoute,
   routeGeometry,
   onAddStop,
 }: MapViewProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<Map | null>(null);
-  const markersRef = useRef<Marker[]>([]);
-  const [isMapLoading, setIsMapLoading] = useState(false);
+  const { theme } = useTheme();
+  const [isReversing, setIsReversing] = useState(false);
+  const [popupInfo, setPopupInfo] = useState<PopupInfo | null>(null);
+  const [viewport, setViewport] = useState({
+    longitude: -3.7038,
+    latitude: 40.4168,
+    zoom: 5,
+  });
 
-  // Inicializar el mapa interactivo una sola vez al montar el componente
-  useEffect(() => {
-    if (map.current || !mapContainer.current) return;
+  const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
+  const mapStyle = theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light;
 
-    map.current = new maplibre.Map({
-      container: mapContainer.current,
-      style: "https://tiles.openfreemap.org/styles/liberty", // Estilo libre y ultra-rápido de OpenFreeMap
-      center: [-3.7038, 40.4168], // Ubicación por defecto: Puerta del Sol, Madrid
-      zoom: 13,
-      attributionControl: false,
-    });
+  const handleMapClick = async (e: any) => {
+    const { lng, lat } = e.lngLat;
+    setIsReversing(true);
 
-    map.current.addControl(new maplibre.NavigationControl(), "top-right");
+    try {
+      const coords: Coordinate = { lat, lng };
+      const address = await reverseGeocode(coords);
+      const displayAddress =
+        address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
-    // Evento de clic en el mapa para añadir nuevos locales mediante geocodificación inversa
-    map.current.on("click", async (e) => {
-      const { lng, lat } = e.lngLat;
-      
-      setIsMapLoading(true);
-      try {
-        // Llamada limpia usando el nuevo adaptador estructural en lugar del archivo en /lib
-        const address = await geocodingAdapter.reverseGeocode(lat, lng);
-        
-        const newVenue: Venue = {
-          id: `click-${Date.now()}`,
-          name: `Punto en el mapa`,
-          address: address,
-          coordinates: { lat, lng },
-          category: "restaurant", // Categoría por defecto al clickear directamente
-          isFeatured: false,
-        };
+      const newVenue: Venue = {
+        id: crypto.randomUUID(),
+        name: displayAddress.split(",")[0].trim(),
+        address: displayAddress,
+        coordinates: coords,
+        category: "restaurant",
+        isFeatured: false,
+      };
 
-        onAddStop(newVenue);
-      } catch (err) {
-        console.error("Error al añadir parada desde el mapa:", err);
-      } finally {
-        setIsMapLoading(false);
-      }
-    });
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
-  }, [onAddStop]);
-
-  // Actualizar marcadores y capas de ruta cuando cambien los datos
-  useEffect(() => {
-    if (!map.current) return;
-
-    const mapInstance = map.current;
-
-    // 1. Limpiar marcadores antiguos del mapa
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
-
-    // Determinar qué lista de paradas pintar en el mapa (la optimizada o la lista base)
-    const activeRoute = optimizedRoute.length > 0 ? optimizedRoute : stops;
-
-    // 2. Dibujar nuevos marcadores estilizados por categoría
-    activeRoute.forEach((venue, index) => {
-      const el = document.createElement("div");
-      el.className = "flex items-center justify-center w-8 h-8 rounded-full shadow-lg border-2 border-white cursor-pointer text-base font-bold transition-transform hover:scale-110";
-      el.style.backgroundColor = VENUE_CATEGORY_COLORS[venue.category];
-      el.innerText = VENUE_CATEGORY_ICONS[venue.category];
-
-      // Popup informativo al hacer clic sobre un marcador
-      const popup = new Popup({ offset: 25 }).setHTML(`
-        <div style="font-family: sans-serif; padding: 2px;">
-          <div style="font-weight: bold; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
-            <span>${index + 1}. ${venue.name}</span>
-            ${venue.isFeatured ? '<span style="background:#f59e0b; color:white; font-size:9px; padding:1px 4px; border-radius:3px;">⭐</span>' : ""}
-          </div>
-          <div style="font-size: 11px; color: #666; margin-bottom: 4px;">${venue.address}</div>
-          <div style="font-size: 10px; text-transform: uppercase; font-weight: bold; color: ${VENUE_CATEGORY_COLORS[venue.category]};">
-            ${VENUE_CATEGORY_LABELS[venue.category]}
-          </div>
-        </div>
-      `);
-
-      const marker = new Marker({ element: el })
-        .setLngLat([venue.coordinates.lng, venue.coordinates.lat])
-        .setPopup(popup)
-        .addTo(mapInstance);
-
-      markersRef.current.push(marker);
-    });
-
-    // 3. Ajustar el encuadre (Bounding Box) del mapa automáticamente para contener todas las paradas
-    if (activeRoute.length > 0) {
-      const bounds = new LngLatBounds();
-      activeRoute.forEach((v) => bounds.extend([v.coordinates.lng, v.coordinates.lat]));
-      mapInstance.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+      onAddStop(newVenue);
+    } catch {
+      const newVenue: Venue = {
+        id: crypto.randomUUID(),
+        name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        coordinates: { lat, lng },
+        category: "restaurant",
+        isFeatured: false,
+      };
+      onAddStop(newVenue);
+    } finally {
+      setIsReversing(false);
     }
+  };
 
-    // 4. Dibujar la línea de la trayectoria (Geometría de carreteras OSRM o línea recta)
-    const updateRouteLayer = () => {
-      if (!mapInstance.isStyleLoaded()) return;
+  return (
+    <div className="h-full w-full rounded-lg overflow-hidden border border-border relative">
+      <Map
+        {...viewport}
+        onMove={(evt) => setViewport(evt.viewState)}
+        mapStyle={mapStyle}
+        maplibregl={require("maplibre-gl")}
+        onClick={handleMapClick}
+        attributionControl={true}
+      >
+        {/* Route line */}
+        {routeGeometry.length > 0 && (
+          <svg
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              pointerEvents: "none",
+            }}
+          >
+            {/* Route polyline would be rendered here via canvas/SVG overlay */}
+          </svg>
+        )}
 
-      const sourceId = "route-source";
-      const layerId = "route-layer";
+        {/* Markers */}
+        {routeToShow.map((venue, index) => (
+          <Marker
+            key={venue.id}
+            longitude={venue.coordinates.lng}
+            latitude={venue.coordinates.lat}
+            onClick={(e) => {
+              e.originalEvent.stopPropagation();
+              setPopupInfo({
+                lng: venue.coordinates.lng,
+                lat: venue.coordinates.lat,
+                venue,
+                index,
+              });
+            }}
+          >
+            <div
+              style={{
+                background: VENUE_CATEGORY_COLORS[venue.category],
+                color: "white",
+                width: venue.isFeatured ? "32px" : "28px",
+                height: venue.isFeatured ? "32px" : "28px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "13px",
+                fontWeight: "bold",
+                border: `${venue.isFeatured ? "3px" : "2px"} solid ${venue.isFeatured ? "#fbbf24" : "white"}`,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                cursor: "pointer",
+              }}
+              title={venue.name}
+            >
+              {index + 1}
+            </div>
+          </Marker>
+        ))}
 
-      // Eliminar capa y fuente previas si existen
-      if (mapInstance.getLayer(layerId)) mapInstance.removeLayer(layerId);
-      if (mapInstance.getSource(sourceId)) mapInstance.removeSource(sourceId);
-
-      if (routeGeometry.length === 0) return;
+        {/* Popup */}
+        {popupInfo && (
+          <Popup
+            longitude={popupInfo.lng}
+            latitude={popupInfo.lat}
+            onClose={() => setPopupInfo(null)}
+            offset={25}
+          >
+            <div style={{
+              fontFamily: "system-ui, sans-serif",
+              fontSize: "13px",
+              lineHeight: "1.4",
+              maxWidth: "220px",
+            }}>
+              <p style={{ fontWeight: 600, margin: "0 0 2px 0", fontSize: "14px" }}>
+                {popupInfo.venue.name}
+              </p>
+              <p style={{ color: "#6b7280", fontSize: "12px", margin: "0 0 4px 0" }}>
+                {VENUE_CATEGORY_ICONS[popupInfo.venue.category]} {VENUE_CATEGORY_LABELS[popupInfo.venue.category]}
+                {popupInfo.venue.isFeatured && (
+                  <span style={{
+                    display: "inline-block",
+                    marginLeft: "4px",
+                    background: "#fef3c7",
+                    color: "#92400e",
+                    fontSize: "11px",
+                    padding: "0 5px",
+                    borderRadius: "4px",
+                    fontWeight: 600,
+                  }}>
+                    ⭐ Destacado
+                  </span>
+                )}
+              </p>
+              <p style={{ color: "#6b7280", fontSize: "11px", margin: "0 0 4px 0" }}>
+                📍 {popupInfo.venue.address}
+              </p>
+              {popupInfo.venue.timeWindow?.estimatedArrival && (
+                <p style={{ color: "#2563eb", fontWeight: 500, margin: 0, fontSize: "12px" }}>
+                  🕐 Llegada: {popupInfo.venue.timeWindow.estimatedArrival}
+                </p>
+              )}
+              {popupInfo.venue.timeWindow?.deadline && (
+                <p style={{ color: "#dc2626", fontWeight: 500, margin: 0, fontSize: "12px" }}>
+                  ⏰ Límite: {popupInfo.venue.timeWindow.deadline}
+                </p>
+              )}
+            </div>
+          </Popup>
+        )}
+      </Map>
 
       // Transformar coordenadas de la app {lat, lng} a formato geoJSON [lng, lat] de MapLibre
       const coordinatesGeoJson = routeGeometry.map((c) => [c.lng, c.lat]);
