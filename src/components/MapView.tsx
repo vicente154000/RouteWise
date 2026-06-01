@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Map, { Marker, Popup } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Venue, Coordinate } from "@/lib/venue";
@@ -39,6 +39,11 @@ export default function MapView({
   onAddStop,
 }: MapViewProps) {
   const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [isReversing, setIsReversing] = useState(false);
   const [popupInfo, setPopupInfo] = useState<PopupInfo | null>(null);
   const [viewport, setViewport] = useState({
@@ -48,7 +53,9 @@ export default function MapView({
   });
 
   const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
-  const mapStyle = theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light;
+  const mapStyle = mounted 
+  ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light) 
+  : STYLE_URLS.light;
 
   const handleMapClick = async (e: any) => {
     const { lng, lat } = e.lngLat;

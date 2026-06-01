@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -44,6 +45,8 @@ export default function Sidebar({
   setIsOptimized,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [address, setAddress] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -102,7 +105,7 @@ export default function Sidebar({
 
   const handleOptimize = async () => {
     if (stops.length < 2) {
-      setError("Añade al menos 2 paradas para optimizar la ruta.");
+      toast.error("Añade al menos 2 paradas para optimizar la ruta.");
       return;
     }
 
@@ -132,10 +135,12 @@ export default function Sidebar({
       }
 
       setIsOptimized(true);
+      toast.success("Ruta optimizada correctamente");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al optimizar la ruta"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al optimizar la ruta";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsOptimizing(false);
     }
@@ -166,8 +171,7 @@ export default function Sidebar({
       .join("\n");
 
     await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success("Ruta copiada al portapapeles");
   };
 
   const handleToggleTheme = () => {
@@ -199,10 +203,14 @@ export default function Sidebar({
             title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
             className="h-8 w-8"
           >
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4 text-muted-foreground" />
+            {mounted ? (
+              theme === "dark" ? (
+                <Sun className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              )
             ) : (
-              <Moon className="h-4 w-4 text-muted-foreground" />
+              <div className="h-4 w-4" />
             )}
           </Button>
         </div>
@@ -225,7 +233,7 @@ export default function Sidebar({
           />
           <Button
             size="icon"
-            disabled
+            disabled={isOptimizing}
             className="opacity-50"
             title="Selecciona una dirección de las sugerencias"
           >
@@ -248,6 +256,7 @@ export default function Sidebar({
           onRemove={handleRemoveStop}
           onUpdateDeadline={handleUpdateDeadline}
           isOptimized={isOptimized}
+          isOptimizing={isOptimizing}
         />
       </div>
 
@@ -312,21 +321,17 @@ export default function Sidebar({
             variant="outline"
             className="flex-1 gap-2"
             onClick={handleCopyRoute}
-            disabled={stops.length === 0}
+            disabled={stops.length === 0 || isOptimizing}
           >
-            {copied ? (
-              <Check className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-            {copied ? "Copiado" : "Copiar ruta"}
+            <Copy className="h-4 w-4" />
+            Copiar ruta
           </Button>
 
           <Button
             variant="outline"
             size="icon"
             onClick={handleClearAll}
-            disabled={stops.length === 0}
+            disabled={stops.length === 0 || isOptimizing}
             className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
           >
             <Trash2 className="h-4 w-4" />
