@@ -10,7 +10,6 @@ import {
   Plus,
   Route,
   Copy,
-  Check,
   Loader2,
   Navigation,
   Trash2,
@@ -49,7 +48,6 @@ export default function Sidebar({
   useEffect(() => setMounted(true), []);
   const [address, setAddress] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [roadDuration, setRoadDuration] = useState<number | null>(null);

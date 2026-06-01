@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 import Map, { Marker, Popup } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { MapMouseEvent } from "maplibre-gl";
 import type { Venue, Coordinate } from "@/lib/venue";
 import {
   VENUE_CATEGORY_COLORS,
@@ -57,7 +58,7 @@ export default function MapView({
   ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light) 
   : STYLE_URLS.light;
 
-  const handleMapClick = async (e: any) => {
+  const handleMapClick = async (e: MapMouseEvent) => {
     const { lng, lat } = e.lngLat;
     setIsReversing(true);
 
@@ -98,9 +99,8 @@ export default function MapView({
         {...viewport}
         onMove={(evt) => setViewport(evt.viewState)}
         mapStyle={mapStyle}
-        maplibregl={require("maplibre-gl")}
         onClick={handleMapClick}
-        attributionControl={true}
+        attributionControl={false}
       >
         {/* Route line */}
         {routeGeometry.length > 0 && (
