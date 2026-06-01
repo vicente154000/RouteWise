@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +44,7 @@ export default function Sidebar({
   setIsOptimized,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [address, setAddress] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -51,6 +52,9 @@ export default function Sidebar({
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [roadDuration, setRoadDuration] = useState<number | null>(null);
 
+ useEffect(() => {
+    setMounted(true);
+  }, []);
   const handleSelectSuggestion = (suggestion: Suggestion) => {
     const newVenue: Venue = {
       id: crypto.randomUUID(),
@@ -199,10 +203,15 @@ export default function Sidebar({
             title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
             className="h-8 w-8"
           >
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4 text-muted-foreground" />
+            {/* NUEVO: Comprobamos si está montado */}
+            {mounted ? (
+              theme === "dark" ? (
+                <Sun className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              )
             ) : (
-              <Moon className="h-4 w-4 text-muted-foreground" />
+              <div className="h-4 w-4" /> // Placeholder vacío para evitar el error
             )}
           </Button>
         </div>
