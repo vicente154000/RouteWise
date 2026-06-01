@@ -248,16 +248,67 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Venue list */}
+      {/* Venue list or onboarding */}
       <div className="flex-1 px-4 pb-2 min-h-0 overflow-hidden">
-        <VenueList
-          venues={stops}
-          optimizedRoute={optimizedRoute}
-          onRemove={handleRemoveStop}
-          onUpdateDeadline={handleUpdateDeadline}
-          isOptimized={isOptimized}
-          isOptimizing={isOptimizing}
-        />
+        {stops.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-6">
+            {/* Step 1 */}
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <span className="text-primary font-bold text-lg">1</span>
+              </div>
+              <h3 className="font-semibold text-foreground">Busca lugares</h3>
+              <p className="text-sm text-muted-foreground max-w-[240px]">
+                Escribe el nombre de un restaurante, bar, museo o direccion en Madrid
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="text-muted-foreground/40">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+
+            {/* Step 2 */}
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <span className="text-primary font-bold text-lg">2</span>
+              </div>
+              <h3 className="font-semibold text-foreground">Anade paradas</h3>
+              <p className="text-sm text-muted-foreground max-w-[240px]">
+                Tambien puedes hacer clic directamente en el mapa para anadir una parada
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="text-muted-foreground/40">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+
+            {/* Step 3 */}
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <span className="text-primary font-bold text-lg">3</span>
+              </div>
+              <h3 className="font-semibold text-foreground">Optimiza tu ruta</h3>
+              <p className="text-sm text-muted-foreground max-w-[240px]">
+                Con al menos 2 paradas, pulsa Optimizar ruta para calcular el mejor recorrido
+              </p>
+            </div>
+          </div>
+        ) : (
+          <VenueList
+            venues={stops}
+            optimizedRoute={optimizedRoute}
+            onRemove={handleRemoveStop}
+            onUpdateDeadline={handleUpdateDeadline}
+            isOptimized={isOptimized}
+            isOptimizing={isOptimizing}
+          />
+        )}
       </div>
 
       {/* Metrics */}
