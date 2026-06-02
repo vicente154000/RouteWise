@@ -1,12 +1,12 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import type { VenueCategory } from "@/lib/venue";
+import { cn } from "@/shared/utils/utils";
+import type { VenueCategory } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_LABELS,
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_COLORS,
-} from "@/lib/venue";
+} from "@/core/domain/venue";
 
 interface CategorySelectorProps {
   selected: VenueCategory[];

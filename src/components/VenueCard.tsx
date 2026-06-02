@@ -3,20 +3,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  GripVertical,
-  Trash2,
-  Clock,
-  Timer,
-  Star,
-  MapPin,
-} from "lucide-react";
-import type { Venue } from "@/lib/venue";
+import { GripVertical, Trash2, Clock, Timer, Star, MapPin } from "lucide-react";
+import type { Venue } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
   VENUE_CATEGORY_COLORS,
-} from "@/lib/venue";
+} from "@/core/domain/venue";
 
 interface VenueCardProps {
   venue: Venue;
@@ -60,11 +53,7 @@ export default function VenueCard({
         {/* Position number */}
         <span
           className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white transition-all duration-300 ${
-            isStart
-              ? "bg-emerald-500"
-              : isEnd
-              ? "bg-red-500"
-              : "bg-blue-500"
+            isStart ? "bg-emerald-500" : isEnd ? "bg-red-500" : "bg-blue-500"
           }`}
         >
           {index + 1}

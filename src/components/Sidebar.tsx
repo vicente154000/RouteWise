@@ -17,12 +17,11 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import AddressAutocomplete from "./AddressAutocomplete";
+import VenueAutocomplete from "./VenueAutocomplete";
 import VenueList from "./VenueList";
-import type { Venue, Coordinate } from "@/lib/venue";
-import type { Suggestion } from "@/lib/geocoding";
-import { optimizeRoute, totalDistance, computeArrivalTimes } from "@/lib/tsp";
-import { getFullRoute } from "@/lib/routing";
+import type { Venue, Coordinate } from "@/core/domain/venue";
+import type { Suggestion } from "@/core/infrastructure/geocoding";
+import { routeOptimizationService } from "@/core/infrastructure/dependencies";
 
 interface SidebarProps {
   stops: Venue[];
@@ -52,17 +51,23 @@ export default function Sidebar({
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [roadDuration, setRoadDuration] = useState<number | null>(null);
 
-  const handleSelectSuggestion = (suggestion: Suggestion) => {
-    const newVenue: Venue = {
-      id: crypto.randomUUID(),
-      name: suggestion.displayName.split(",")[0].trim(),
-      address: suggestion.displayName,
-      coordinates: suggestion.coordinates,
-      category: "restaurant",
-      isFeatured: false,
-    };
+  const handleSelectSuggestion = (suggestion: Suggestion | Venue) => {
+    // If a Venue is passed (from VenueAutocomplete), add it directly
+    if ((suggestion as Venue).id && (suggestion as Venue).name) {
+      setStops((prev) => [...prev, suggestion as Venue]);
+    } else {
+      const s = suggestion as Suggestion;
+      const newVenue: Venue = {
+        id: crypto.randomUUID(),
+        name: s.displayName.split(",")[0].trim(),
+        address: s.displayName,
+        coordinates: s.coordinates,
+        category: "restaurant",
+        isFeatured: false,
+      };
 
-    setStops((prev) => [...prev, newVenue]);
+      setStops((prev) => [...prev, newVenue]);
+    }
     setAddress("");
 
     if (isOptimized) {
@@ -95,9 +100,12 @@ export default function Sidebar({
     setStops((prev) =>
       prev.map((s) =>
         s.id === id
-          ? { ...s, timeWindow: { ...s.timeWindow, deadline: deadline || undefined } }
-          : s
-      )
+          ? {
+              ...s,
+              timeWindow: { ...s.timeWindow, deadline: deadline || undefined },
+            }
+          : s,
+      ),
     );
   };
 
@@ -111,24 +119,19 @@ export default function Sidebar({
     setError(null);
 
     try {
-      const optimized = optimizeRoute(stops) as Venue[];
-      const coords = optimized.map((s) => s.coordinates);
-      const routeResult = await getFullRoute(coords);
+      const result = await routeOptimizationService.optimize(stops);
 
-      if (routeResult) {
-        const routeWithTimes = computeArrivalTimes(
-          optimized,
-          routeResult.segments
-        ) as Venue[];
-
-        setOptimizedRoute(routeWithTimes);
-        setRouteGeometry(routeResult.fullGeometry);
-        setRoadDistance(routeResult.totalDistance);
-        setRoadDuration(routeResult.totalDuration);
+      if (result) {
+        setOptimizedRoute(result.venues);
+        setRouteGeometry(result.geometry);
+        setRoadDistance(result.totalDistance ?? null);
+        setRoadDuration(result.totalDuration ?? null);
       } else {
-        setOptimizedRoute(optimized);
+        // Fallback: use straight-line order
+        const coords = stops.map((s) => s.coordinates);
+        setOptimizedRoute(stops);
         setRouteGeometry(coords);
-        setRoadDistance(totalDistance(coords));
+        setRoadDistance(routeOptimizationService.computeTotalDistance(coords));
         setRoadDuration(null);
       }
 
@@ -198,7 +201,11 @@ export default function Sidebar({
             variant="ghost"
             size="icon"
             onClick={handleToggleTheme}
-            title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            title={
+              theme === "dark"
+                ? "Cambiar a modo claro"
+                : "Cambiar a modo oscuro"
+            }
             className="h-8 w-8"
           >
             {mounted ? (
@@ -222,12 +229,13 @@ export default function Sidebar({
       {/* Add stop form with autocomplete */}
       <div className="p-4 space-y-2">
         <div className="flex gap-2">
-          <AddressAutocomplete
+          <VenueAutocomplete
             value={address}
             onChange={setAddress}
             onSelect={handleSelectSuggestion}
             onKeyDown={handleKeyDown}
-            placeholder="Dirección o lugar (ej: Avenida de Madrid, Madrid)"
+            categoryFilter={["restaurant", "bar", "nightclub"]}
+            placeholder="Busca restaurante, bar o discoteca"
           />
           <Button
             size="icon"
@@ -257,14 +265,25 @@ export default function Sidebar({
               </div>
               <h3 className="font-semibold text-foreground">Busca lugares</h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
-                Escribe el nombre de un restaurante, bar, museo o direccion en Madrid
+                Escribe el nombre de un restaurante, bar, museo o direccion en
+                Madrid
               </p>
             </div>
 
             {/* Arrow */}
             <div className="text-muted-foreground/40">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                />
               </svg>
             </div>
 
@@ -275,14 +294,25 @@ export default function Sidebar({
               </div>
               <h3 className="font-semibold text-foreground">Anade paradas</h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
-                Tambien puedes hacer clic directamente en el mapa para anadir una parada
+                Tambien puedes hacer clic directamente en el mapa para anadir
+                una parada
               </p>
             </div>
 
             {/* Arrow */}
             <div className="text-muted-foreground/40">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                />
               </svg>
             </div>
 
@@ -291,9 +321,12 @@ export default function Sidebar({
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <span className="text-primary font-bold text-lg">3</span>
               </div>
-              <h3 className="font-semibold text-foreground">Optimiza tu ruta</h3>
+              <h3 className="font-semibold text-foreground">
+                Optimiza tu ruta
+              </h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
-                Con al menos 2 paradas, pulsa Optimizar ruta para calcular el mejor recorrido
+                Con al menos 2 paradas, pulsa Optimizar ruta para calcular el
+                mejor recorrido
               </p>
             </div>
           </div>
@@ -321,9 +354,9 @@ export default function Sidebar({
                 <span className="text-sm font-bold text-foreground">
                   {isOptimized && roadDistance !== null
                     ? `${roadDistance.toFixed(1)} km`
-                    : `${totalDistance(
-                        stops.map((s) => s.coordinates)
-                      ).toFixed(1)} km`}
+                    : `${routeOptimizationService
+                        .computeTotalDistance(stops.map((s) => s.coordinates))
+                        .toFixed(1)} km`}
                 </span>
               </div>
 

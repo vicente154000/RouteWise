@@ -1,4 +1,4 @@
-import type { Venue, VenueCategory } from "./venue";
+import type { Venue, VenueCategory } from "../domain/venue";
 
 /**
  * OSM node/way tags used for each venue category.
@@ -97,7 +97,10 @@ export async function searchOverpassVenues(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), OVERPASS_TIMEOUT * 1000);
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      OVERPASS_TIMEOUT * 1000,
+    );
 
     const response = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
@@ -138,7 +141,8 @@ export async function searchOverpassVenues(
 
         const street = el.tags?.["addr:street"] || "";
         const housenumber = el.tags?.["addr:housenumber"] || "";
-        const address = [street, housenumber].filter(Boolean).join(", ") ||
+        const address =
+          [street, housenumber].filter(Boolean).join(", ") ||
           `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
         return {

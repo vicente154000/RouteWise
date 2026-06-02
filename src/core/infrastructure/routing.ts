@@ -1,4 +1,5 @@
-import type { Coordinate, RouteResult, RouteSegment } from "./tsp";
+import type { RouteResult, RouteSegment } from "../domain/tsp";
+import type { Coordinate } from "../domain/venue";
 
 /**
  * OSRM base URL.
@@ -62,7 +63,7 @@ function decodePolyline(encoded: string): Coordinate[] {
  */
 export async function getRoute(
   from: Coordinate,
-  to: Coordinate
+  to: Coordinate,
 ): Promise<RouteSegment | null> {
   const url = `${OSRM_URL}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=polyline&steps=false`;
 
@@ -70,7 +71,9 @@ export async function getRoute(
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.warn(`OSRM error: ${response.statusText}, falling back to straight line`);
+      console.warn(
+        `OSRM error: ${response.statusText}, falling back to straight line`,
+      );
       return null;
     }
 
@@ -98,7 +101,9 @@ export async function getRoute(
  * Get the full road route for a sequence of ordered stops.
  * Fetches all segments in parallel and returns the combined result.
  */
-export async function getFullRoute(stops: Coordinate[]): Promise<RouteResult | null> {
+export async function getFullRoute(
+  stops: Coordinate[],
+): Promise<RouteResult | null> {
   if (stops.length < 2) return null;
 
   // Build all segment promises
@@ -169,7 +174,8 @@ function haversineDistance(a: Coordinate, b: Coordinate): number {
     sinDLat * sinDLat +
     Math.cos((a.lat * Math.PI) / 180) *
       Math.cos((b.lat * Math.PI) / 180) *
-      sinDLng * sinDLng;
+      sinDLng *
+      sinDLng;
   const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
   return R * c;
 }

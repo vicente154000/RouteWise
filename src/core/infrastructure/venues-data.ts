@@ -1,4 +1,4 @@
-import type { Venue } from "./venue";
+import type { Venue } from "../domain/venue";
 
 /**
  * Local catalog of ~15 example venues in Madrid for demo/offline use.

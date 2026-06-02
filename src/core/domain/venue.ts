@@ -1,10 +1,8 @@
 export type Coordinate = { lat: number; lng: number };
 
 export interface TimeWindow {
-  /** Estimated arrival time (HH:MM) set after route optimization */
-  estimatedArrival?: string;
-  /** Deadline time (HH:MM) optionally set by the user */
-  deadline?: string;
+  estimatedArrival?: string; // HH:MM
+  deadline?: string; // HH:MM
 }
 
 export type VenueCategory = "restaurant" | "bar" | "nightclub";
@@ -33,7 +31,7 @@ export interface Venue {
   address: string;
   coordinates: Coordinate;
   category: VenueCategory;
-  isFeatured: boolean;
+  isFeatured?: boolean;
   timeWindow?: TimeWindow;
 }
 
