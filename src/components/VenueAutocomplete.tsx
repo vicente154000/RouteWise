@@ -3,14 +3,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Loader2, MapPin, Store, Search } from "lucide-react";
-import { searchSuggestions, type Suggestion } from "@/lib/geocoding";
-import { searchLocalVenues } from "@/lib/venues-data";
-import { searchOverpassVenues } from "@/lib/overpass";
-import type { Venue, VenueCategory } from "@/lib/venue";
+import {
+  searchSuggestions,
+  type Suggestion,
+} from "@/core/infrastructure/geocoding";
+import { searchLocalVenues } from "@/core/infrastructure/venues-data";
+import { searchOverpassVenues } from "@/core/infrastructure/overpass";
+import type { Venue, VenueCategory } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
-} from "@/lib/venue";
+} from "@/core/domain/venue";
 
 interface VenueSuggestion {
   type: "local" | "overpass" | "nominatim";
@@ -74,7 +77,7 @@ export default function VenueAutocomplete({
       setShowDropdown(false);
       setSuggestions([]);
     },
-    [onChange, onSelect]
+    [onChange, onSelect],
   );
 
   // Fetch suggestions with debounce
@@ -136,12 +139,15 @@ export default function VenueAutocomplete({
         // If all fail, show empty
       } finally {
         // Apply category filter if set
-        const filtered = categoryFilter && categoryFilter.length > 0 && categoryFilter.length < 3
-          ? results.filter((r) => {
-              if (r.type === "nominatim") return true; // Nominatim results pass through
-              return r.venue && categoryFilter.includes(r.venue.category);
-            })
-          : results;
+        const filtered =
+          categoryFilter &&
+          categoryFilter.length > 0 &&
+          categoryFilter.length < 3
+            ? results.filter((r) => {
+                if (r.type === "nominatim") return true; // Nominatim results pass through
+                return r.venue && categoryFilter.includes(r.venue.category);
+              })
+            : results;
 
         setSuggestions(filtered.slice(0, 8));
         setShowDropdown(filtered.length > 0);
@@ -183,13 +189,13 @@ export default function VenueAutocomplete({
         case "ArrowDown":
           e.preventDefault();
           setSelectedIndex((prev) =>
-            prev < suggestions.length - 1 ? prev + 1 : 0
+            prev < suggestions.length - 1 ? prev + 1 : 0,
           );
           break;
         case "ArrowUp":
           e.preventDefault();
           setSelectedIndex((prev) =>
-            prev > 0 ? prev - 1 : suggestions.length - 1
+            prev > 0 ? prev - 1 : suggestions.length - 1,
           );
           break;
         case "Enter":
@@ -207,7 +213,7 @@ export default function VenueAutocomplete({
           onKeyDown(e);
       }
     },
-    [showDropdown, suggestions, selectedIndex, onKeyDown, handleSelect]
+    [showDropdown, suggestions, selectedIndex, onKeyDown, handleSelect],
   );
 
   const getSourceLabel = (type: VenueSuggestion["type"]): string => {
@@ -277,8 +283,8 @@ export default function VenueAutocomplete({
                 {item.type === "nominatim"
                   ? "📍"
                   : item.venue
-                  ? VENUE_CATEGORY_ICONS[item.venue.category]
-                  : "📍"}
+                    ? VENUE_CATEGORY_ICONS[item.venue.category]
+                    : "📍"}
               </span>
 
               <div className="min-w-0 flex-1">
@@ -291,8 +297,8 @@ export default function VenueAutocomplete({
                   {item.type === "nominatim" && item.suggestion
                     ? item.suggestion.displayName
                     : item.venue
-                    ? `${item.venue.address} · ${VENUE_CATEGORY_LABELS[item.venue.category]}${item.venue.isFeatured ? " · ⭐ Destacado" : ""}`
-                    : ""}
+                      ? `${item.venue.address} · ${VENUE_CATEGORY_LABELS[item.venue.category]}${item.venue.isFeatured ? " · ⭐ Destacado" : ""}`
+                      : ""}
                 </span>
               </div>
 

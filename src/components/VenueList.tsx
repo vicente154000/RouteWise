@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin } from "lucide-react";
-import type { Venue } from "@/lib/venue";
+import type { Venue } from "@/core/domain/venue";
 import VenueCard from "./VenueCard";
 
 interface VenueListProps {

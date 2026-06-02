@@ -5,13 +5,13 @@ import { useState, useEffect, useCallback, memo, useRef } from "react";
 import Map, { Marker, Popup } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { MapMouseEvent } from "maplibre-gl";
-import type { Venue, Coordinate } from "@/lib/venue";
+import type { Venue, Coordinate } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_COLORS,
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
-} from "@/lib/venue";
-import { reverseGeocode } from "@/lib/geocoding";
+} from "@/core/domain/venue";
+import { reverseGeocode } from "@/core/infrastructure/geocoding";
 import { Loader2 } from "lucide-react";
 
 const STYLE_URLS = {
@@ -59,50 +59,60 @@ function MapView({
 
   const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
   const mapStyle = mounted
-    ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light)
+    ? theme === "dark"
+      ? STYLE_URLS.dark
+      : STYLE_URLS.light
     : STYLE_URLS.light;
 
-  const handleMapClick = useCallback(async (e: MapMouseEvent) => {
-    const { lng, lat } = e.lngLat;
-    setIsReversing(true);
+  const handleMapClick = useCallback(
+    async (e: MapMouseEvent) => {
+      const { lng, lat } = e.lngLat;
+      setIsReversing(true);
 
-    try {
-      const coords: Coordinate = { lat, lng };
-      const address = await reverseGeocode(coords);
-      const displayAddress =
-        address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      try {
+        const coords: Coordinate = { lat, lng };
+        const address = await reverseGeocode(coords);
+        const displayAddress =
+          address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
-      const newVenue: Venue = {
-        id: crypto.randomUUID(),
-        name: displayAddress.split(",")[0].trim(),
-        address: displayAddress,
-        coordinates: coords,
-        category: "restaurant",
-        isFeatured: false,
-      };
+        const newVenue: Venue = {
+          id: crypto.randomUUID(),
+          name: displayAddress.split(",")[0].trim(),
+          address: displayAddress,
+          coordinates: coords,
+          category: "restaurant",
+          isFeatured: false,
+        };
 
-      onAddStop(newVenue);
-    } catch {
-      const newVenue: Venue = {
-        id: crypto.randomUUID(),
-        name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        coordinates: { lat, lng },
-        category: "restaurant",
-        isFeatured: false,
-      };
-      onAddStop(newVenue);
-    } finally {
-      setIsReversing(false);
-    }
-  }, [onAddStop]);
+        onAddStop(newVenue);
+      } catch {
+        const newVenue: Venue = {
+          id: crypto.randomUUID(),
+          name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+          address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+          coordinates: { lat, lng },
+          category: "restaurant",
+          isFeatured: false,
+        };
+        onAddStop(newVenue);
+      } finally {
+        setIsReversing(false);
+      }
+    },
+    [onAddStop],
+  );
 
   // Only update viewport state when user stops moving (onMoveEnd)
   // This avoids re-rendering on every single pixel of pan/zoom
-  const handleMoveEnd = useCallback((evt: { viewState: { longitude: number; latitude: number; zoom: number } }) => {
-    setViewport(evt.viewState);
-    isMovingRef.current = false;
-  }, []);
+  const handleMoveEnd = useCallback(
+    (evt: {
+      viewState: { longitude: number; latitude: number; zoom: number };
+    }) => {
+      setViewport(evt.viewState);
+      isMovingRef.current = false;
+    },
+    [],
+  );
 
   const handleMove = useCallback(() => {
     isMovingRef.current = true;
@@ -185,42 +195,79 @@ function MapView({
             onClose={handlePopupClose}
             offset={25}
           >
-            <div style={{
-              fontFamily: "system-ui, sans-serif",
-              fontSize: "13px",
-              lineHeight: "1.4",
-              maxWidth: "220px",
-            }}>
-              <p style={{ fontWeight: 600, margin: "0 0 2px 0", fontSize: "14px" }}>
+            <div
+              style={{
+                fontFamily: "system-ui, sans-serif",
+                fontSize: "13px",
+                lineHeight: "1.4",
+                maxWidth: "220px",
+              }}
+            >
+              <p
+                style={{
+                  fontWeight: 600,
+                  margin: "0 0 2px 0",
+                  fontSize: "14px",
+                }}
+              >
                 {popupInfo.venue.name}
               </p>
-              <p style={{ color: "#6b7280", fontSize: "12px", margin: "0 0 4px 0" }}>
-                {VENUE_CATEGORY_ICONS[popupInfo.venue.category]} {VENUE_CATEGORY_LABELS[popupInfo.venue.category]}
+              <p
+                style={{
+                  color: "#6b7280",
+                  fontSize: "12px",
+                  margin: "0 0 4px 0",
+                }}
+              >
+                {VENUE_CATEGORY_ICONS[popupInfo.venue.category]}{" "}
+                {VENUE_CATEGORY_LABELS[popupInfo.venue.category]}
                 {popupInfo.venue.isFeatured && (
-                  <span style={{
-                    display: "inline-block",
-                    marginLeft: "4px",
-                    background: "#fef3c7",
-                    color: "#92400e",
-                    fontSize: "11px",
-                    padding: "0 5px",
-                    borderRadius: "4px",
-                    fontWeight: 600,
-                  }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginLeft: "4px",
+                      background: "#fef3c7",
+                      color: "#92400e",
+                      fontSize: "11px",
+                      padding: "0 5px",
+                      borderRadius: "4px",
+                      fontWeight: 600,
+                    }}
+                  >
                     ⭐ Destacado
                   </span>
                 )}
               </p>
-              <p style={{ color: "#6b7280", fontSize: "11px", margin: "0 0 4px 0" }}>
+              <p
+                style={{
+                  color: "#6b7280",
+                  fontSize: "11px",
+                  margin: "0 0 4px 0",
+                }}
+              >
                 📍 {popupInfo.venue.address}
               </p>
               {popupInfo.venue.timeWindow?.estimatedArrival && (
-                <p style={{ color: "#2563eb", fontWeight: 500, margin: 0, fontSize: "12px" }}>
+                <p
+                  style={{
+                    color: "#2563eb",
+                    fontWeight: 500,
+                    margin: 0,
+                    fontSize: "12px",
+                  }}
+                >
                   🕐 Llegada: {popupInfo.venue.timeWindow.estimatedArrival}
                 </p>
               )}
               {popupInfo.venue.timeWindow?.deadline && (
-                <p style={{ color: "#dc2626", fontWeight: 500, margin: 0, fontSize: "12px" }}>
+                <p
+                  style={{
+                    color: "#dc2626",
+                    fontWeight: 500,
+                    margin: 0,
+                    fontSize: "12px",
+                  }}
+                >
                   ⏰ Límite: {popupInfo.venue.timeWindow.deadline}
                 </p>
               )}

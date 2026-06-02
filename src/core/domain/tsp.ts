@@ -1,21 +1,4 @@
-export interface Coordinate {
-  lat: number;
-  lng: number;
-}
-
-export interface TimeWindow {
-  /** Estimated arrival time (HH:MM) - computed after optimization */
-  estimatedArrival?: string;
-  /** Deadline time (HH:MM) - user can set a latest arrival time */
-  deadline?: string;
-}
-
-export interface Stop {
-  id: string;
-  address: string;
-  coordinates: Coordinate;
-  timeWindow?: TimeWindow;
-}
+import type { Coordinate, Venue } from "./venue";
 
 export interface RouteSegment {
   distance: number; // km
@@ -44,9 +27,7 @@ export interface TSPConfig {
  * A stop that may include an `isFeatured` flag for weighted TSP optimization.
  * This is a superset of `Stop` used when venues have featured status.
  */
-export interface FeaturedStop extends Stop {
-  isFeatured?: boolean;
-}
+// We use `Venue` from domain which includes `isFeatured?: boolean`
 
 /**
  * Default TSP configuration.
@@ -68,7 +49,8 @@ export function haversineDistance(a: Coordinate, b: Coordinate): number {
     sinDLat * sinDLat +
     Math.cos((a.lat * Math.PI) / 180) *
       Math.cos((b.lat * Math.PI) / 180) *
-      sinDLng * sinDLng;
+      sinDLng *
+      sinDLng;
   const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
   return R * c;
 }
@@ -95,7 +77,7 @@ export function totalDistance(coords: Coordinate[]): number {
  */
 export function weightedDistance(
   from: Coordinate,
-  to: FeaturedStop,
+  to: Venue,
   config?: TSPConfig,
 ): number {
   const rawDist = haversineDistance(from, to.coordinates);
@@ -111,20 +93,17 @@ export function weightedDistance(
  * Nearest Neighbor heuristic for TSP.
  * Supports weighted distance for featured venues via TSPConfig.
  */
-export function nearestNeighbor(
-  stops: FeaturedStop[],
-  config?: TSPConfig,
-): FeaturedStop[] {
+export function nearestNeighbor(stops: Venue[], config?: TSPConfig): Venue[] {
   if (stops.length <= 2) return [...stops];
 
   const visited = new Set<string>();
-  const result: FeaturedStop[] = [];
+  const result: Venue[] = [];
   let current = stops[0];
   result.push(current);
   visited.add(current.id);
 
   while (visited.size < stops.length) {
-    let nearest: FeaturedStop | null = null;
+    let nearest: Venue | null = null;
     let nearestDist = Infinity;
 
     for (const stop of stops) {
@@ -150,17 +129,14 @@ export function nearestNeighbor(
  * 2-opt local search improvement for TSP.
  * Supports weighted distance for featured venues via TSPConfig.
  */
-export function twoOpt(
-  stops: FeaturedStop[],
-  config?: TSPConfig,
-): FeaturedStop[] {
+export function twoOpt(stops: Venue[], config?: TSPConfig): Venue[] {
   if (stops.length <= 3) return [...stops];
 
   let improved = true;
   let bestRoute = [...stops];
 
   // Use weighted distance for total route cost
-  const routeCost = (route: FeaturedStop[]): number => {
+  const routeCost = (route: Venue[]): number => {
     let cost = 0;
     for (let i = 0; i < route.length - 1; i++) {
       cost += weightedDistance(route[i].coordinates, route[i + 1], config);
@@ -190,7 +166,7 @@ export function twoOpt(
   return bestRoute;
 }
 
-function twoOptSwap(route: FeaturedStop[], i: number, k: number): FeaturedStop[] {
+function twoOptSwap(route: Venue[], i: number, k: number): Venue[] {
   const before = route.slice(0, i);
   const segment = route.slice(i, k);
   const after = route.slice(k);
@@ -201,10 +177,7 @@ function twoOptSwap(route: FeaturedStop[], i: number, k: number): FeaturedStop[]
  * Full optimization pipeline: Nearest Neighbor + 2-opt refinement.
  * Supports weighted distance for featured venues via TSPConfig.
  */
-export function optimizeRoute(
-  stops: FeaturedStop[],
-  config?: TSPConfig,
-): FeaturedStop[] {
+export function optimizeRoute(stops: Venue[], config?: TSPConfig): Venue[] {
   if (stops.length <= 2) return [...stops];
   const nnRoute = nearestNeighbor(stops, config);
   return twoOpt(nnRoute, config);
@@ -215,10 +188,10 @@ export function optimizeRoute(
  * Assumes start time is 08:00 and each stop takes 10 minutes.
  */
 export function computeArrivalTimes(
-  route: FeaturedStop[],
+  route: Venue[],
   segments: RouteSegment[],
   startTime: string = "08:00",
-): FeaturedStop[] {
+): Venue[] {
   if (route.length === 0) return route;
 
   const [startHours, startMinutes] = startTime.split(":").map(Number);
@@ -247,6 +220,6 @@ export function computeArrivalTimes(
         ...stop.timeWindow,
         estimatedArrival,
       },
-    };
+    } as Venue;
   });
 }

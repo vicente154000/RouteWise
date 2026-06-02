@@ -1,4 +1,4 @@
-import type { Coordinate } from "./tsp";
+import type { Coordinate } from "../domain/venue";
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org";
 
@@ -27,14 +27,11 @@ export async function searchSuggestions(query: string): Promise<Suggestion[]> {
     addressdetails: "1",
   });
 
-  const response = await fetch(
-    `${NOMINATIM_URL}/search?${params.toString()}`,
-    {
-      headers: {
-        "User-Agent": "RouteWise/1.0 (route-optimizer-app)",
-      },
-    }
-  );
+  const response = await fetch(`${NOMINATIM_URL}/search?${params.toString()}`, {
+    headers: {
+      "User-Agent": "RouteWise/1.0 (route-optimizer-app)",
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`Nominatim error: ${response.statusText}`);
@@ -58,7 +55,7 @@ export async function searchSuggestions(query: string): Promise<Suggestion[]> {
  * Returns the first result's coordinates, or null if not found.
  */
 export async function geocodeAddress(
-  address: string
+  address: string,
 ): Promise<Coordinate | null> {
   const params = new URLSearchParams({
     q: address,
@@ -93,7 +90,7 @@ export async function geocodeAddress(
  * Returns the display name or null if not found.
  */
 export async function reverseGeocode(
-  coordinates: Coordinate
+  coordinates: Coordinate,
 ): Promise<string | null> {
   const params = new URLSearchParams({
     lat: coordinates.lat.toString(),
@@ -107,7 +104,7 @@ export async function reverseGeocode(
       headers: {
         "User-Agent": "RouteWise/1.0 (route-optimizer-app)",
       },
-    }
+    },
   );
 
   if (!response.ok) {
