@@ -8,11 +8,12 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: "node",
+    environment: "jsdom",
     include: [
-      "src/core/**/__tests__/**/*.test.ts",
-      "src/core/__tests__/*.test.ts",
+      "src/core/**/__tests__/**/*.test.{ts,tsx}",
+      "src/core/__tests__/*.test.{ts,tsx}",
     ],
+    setupFiles: ["src/core/__tests__/test-setup.ts"],
     deps: {
       inline: [/^@\/core/],
     },
