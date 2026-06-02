@@ -62,7 +62,7 @@ function MapView({
     ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light)
     : STYLE_URLS.light;
 
-  const handleMapClick = useCallback(async (e: MapMouseEvent) => {
+  const handleMapClick = async (e: MapMouseEvent) => {
     const { lng, lat } = e.lngLat;
     setIsReversing(true);
 
@@ -121,13 +121,6 @@ function MapView({
         mapStyle={mapStyle}
         onClick={handleMapClick}
         attributionControl={false}
-        scrollZoom={{
-          around: "center",
-        }}
-        dragPan={true}
-        dragRotate={false}
-        touchZoomRotate={true}
-        style={{ width: "100%", height: "100%" }}
       >
         {/* Route line */}
         {routeGeometry.length > 0 && (
