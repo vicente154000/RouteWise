@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "async_hooks";
 import type { Coordinate, Venue } from "./venue";
 
 export interface RouteSegment {
@@ -185,31 +186,42 @@ export function optimizeRoute(stops: Venue[], config?: TSPConfig): Venue[] {
 
 /**
  * Compute estimated arrival times for each stop in the route.
- * Assumes start time is 08:00 and each stop takes 10 minutes.
+ * If a startTime is provided, it calculates the exact arrival hour.
+ * Otherwise it returns cumulative duration only.
+ * Each stop includes a fixed visit duration of 10 minutes.
  */
 export function computeArrivalTimes(
   route: Venue[],
   segments: RouteSegment[],
-  startTime: string = "08:00",
+  startTime?: string,
 ): Venue[] {
   if (route.length === 0) return route;
 
-  const [startHours, startMinutes] = startTime.split(":").map(Number);
-  let currentSeconds = startHours * 3600 + startMinutes * 60;
+  const hasStartTime = Boolean(startTime?.trim());
+  let currentSeconds = 0;
   const STOP_DURATION_SECONDS = 10 * 60; // 10 min per stop
+
+  if (hasStartTime) {
+    const [startHours, startMinutes] = startTime!.split(":").map(Number);
+    if (!Number.isNaN(startHours) && !Number.isNaN(startMinutes)) {
+      currentSeconds = startHours * 3600 + startMinutes * 60;
+    }
+  }
 
   return route.map((stop, index) => {
     if (index > 0 && segments[index - 1]) {
       currentSeconds += segments[index - 1].duration;
     }
 
-    const hours = Math.floor(currentSeconds / 3600);
-    const minutes = Math.floor((currentSeconds % 3600) / 60);
-    const estimatedArrival = `${String(hours).padStart(2, "0")}:${String(
-      minutes,
-    ).padStart(2, "0")}`;
+    const estimatedArrival = hasStartTime
+      ? `${String(Math.floor(currentSeconds / 3600)).padStart(2, "0")}:${String(Math.floor((currentSeconds % 3600) / 60)).padStart(2, "0")} - Llegada`
+      : (() => {
+          const totalMinutes = Math.floor(currentSeconds / 60);
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = totalMinutes % 60;
+          return hours > 0 ? `${hours}h ${minutes} min` : `${minutes} min`;
+        })();
 
-    // Add stop duration (except for last stop)
     if (index < route.length - 1) {
       currentSeconds += STOP_DURATION_SECONDS;
     }

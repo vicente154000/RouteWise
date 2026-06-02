@@ -103,7 +103,7 @@ export default function VenueCard({
         {venue.timeWindow?.estimatedArrival && (
           <div className="flex items-center gap-1 text-xs text-blue-600 transition-all duration-300">
             <Clock className="h-3 w-3" />
-            <span>Llegada: {venue.timeWindow.estimatedArrival}</span>
+            <span>{venue.timeWindow.estimatedArrival}</span>
           </div>
         )}
 

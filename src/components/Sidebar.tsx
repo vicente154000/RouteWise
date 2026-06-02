@@ -5,7 +5,9 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Plus,
   Route,
@@ -46,6 +48,10 @@ export default function Sidebar({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [address, setAddress] = useState("");
+  const [startTime, setStartTime] = useLocalStorage<string>(
+    "routewise-start-time",
+    "",
+  );
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
@@ -119,7 +125,10 @@ export default function Sidebar({
     setError(null);
 
     try {
-      const result = await routeOptimizationService.optimize(stops);
+      const result = await routeOptimizationService.optimize(
+        stops,
+        startTime || undefined,
+      );
 
       if (result) {
         setOptimizedRoute(result.venues);
@@ -252,8 +261,28 @@ export default function Sidebar({
             {error}
           </p>
         )}
-      </div>
 
+        <div className="grid grid-cols-2 gap-2 items-end">
+          <div className="flex flex-col space-y-1">
+            <label className="text-xs text-muted-foreground">
+              Hora de inicio
+            </label>
+            <Input
+              type="time"
+              aria-label="Hora de inicio"
+              className="h-8 w-full"
+              value={startTime}
+              onChange={(event) => setStartTime(event.target.value)}
+              onMouseUp={(event) => event.preventDefault()}
+            />
+          </div>
+
+          <Button className="w-full">
+            <Clock className="h-4 w-4" />
+            Establecer hora
+          </Button>
+        </div>
+      </div>
       {/* Venue list or onboarding */}
       <div className="flex-1 px-4 pb-2 min-h-0 overflow-hidden">
         {stops.length === 0 ? (

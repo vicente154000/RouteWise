@@ -256,7 +256,7 @@ function MapView({
                     fontSize: "12px",
                   }}
                 >
-                  🕐 Llegada: {popupInfo.venue.timeWindow.estimatedArrival}
+                  🕐 {popupInfo.venue.timeWindow.estimatedArrival}
                 </p>
               )}
               {popupInfo.venue.timeWindow?.deadline && (
