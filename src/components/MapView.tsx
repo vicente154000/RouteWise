@@ -1,10 +1,7 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useState, useEffect, useCallback, memo, useRef } from "react";
-import Map, { Marker, Popup } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
-import type { MapMouseEvent } from "maplibre-gl";
+import "leaflet/dist/leaflet.css";
 import type { Venue, Coordinate } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_COLORS,
@@ -13,11 +10,7 @@ import {
 } from "@/core/domain/venue";
 import { reverseGeocode } from "@/core/infrastructure/geocoding";
 import { Loader2 } from "lucide-react";
-
-const STYLE_URLS = {
-  light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-  dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-};
+import L from "leaflet";
 
 interface MapViewProps {
   stops: Venue[];
@@ -26,11 +19,51 @@ interface MapViewProps {
   onAddStop: (stop: Venue) => void;
 }
 
-interface PopupInfo {
-  lng: number;
-  lat: number;
-  venue: Venue;
-  index: number;
+// Fix Leaflet default icon issue (webpack)
+function fixLeafletIcon() {
+  delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl:
+      "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl:
+      "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl:
+      "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  });
+}
+
+// Custom marker icon based on venue category
+function createCategoryIcon(
+  category: Venue["category"],
+  isFeatured: boolean,
+  index: number,
+) {
+  const color = VENUE_CATEGORY_COLORS[category];
+  const size = isFeatured ? 36 : 30;
+
+  return L.divIcon({
+    className: "custom-marker",
+    html: `<div style="
+      background: ${color};
+      color: white;
+      width: ${size}px;
+      height: ${size}px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      border: ${isFeatured ? "3px" : "2px"} solid ${
+        isFeatured ? "#fbbf24" : "white"
+      };
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+    ">${index + 1}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
 }
 
 function MapView({
@@ -39,34 +72,49 @@ function MapView({
   routeGeometry,
   onAddStop,
 }: MapViewProps) {
-  const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [isReversing, setIsReversing] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const polylineRef = useRef<L.Polyline | null>(null);
+  const iconFixedRef = useRef(false);
 
+  // Mark as mounted on first render
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const [isReversing, setIsReversing] = useState(false);
-  const [popupInfo, setPopupInfo] = useState<PopupInfo | null>(null);
-  const [viewport, setViewport] = useState({
-    longitude: -3.7038,
-    latitude: 40.4168,
-    zoom: 5,
-  });
+  // Initialize map once the container is in the DOM
+  useEffect(() => {
+    if (!mounted) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
-  // Ref to track if a move was just from user interaction
-  const isMovingRef = useRef(false);
+    if (!iconFixedRef.current) {
+      fixLeafletIcon();
+      iconFixedRef.current = true;
+    }
 
-  const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
-  const mapStyle = mounted
-    ? theme === "dark"
-      ? STYLE_URLS.dark
-      : STYLE_URLS.light
-    : STYLE_URLS.light;
+    const container = mapContainerRef.current;
 
-  const handleMapClick = useCallback(
-    async (e: MapMouseEvent) => {
-      const { lng, lat } = e.lngLat;
+    const map = L.map(container, {
+      center: [40.4168, -3.7038],
+      zoom: 12,
+      zoomControl: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    // Force size recalculation after mount
+    requestAnimationFrame(() => map.invalidateSize());
+
+    map.on("click", async (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
       setIsReversing(true);
 
       try {
@@ -98,183 +146,89 @@ function MapView({
       } finally {
         setIsReversing(false);
       }
-    },
-    [onAddStop],
-  );
+    });
 
-  // Only update viewport state when user stops moving (onMoveEnd)
-  // This avoids re-rendering on every single pixel of pan/zoom
-  const handleMoveEnd = useCallback(
-    (evt: {
-      viewState: { longitude: number; latitude: number; zoom: number };
-    }) => {
-      setViewport(evt.viewState);
-      isMovingRef.current = false;
-    },
-    [],
-  );
+    mapRef.current = map;
 
-  const handleMove = useCallback(() => {
-    isMovingRef.current = true;
-  }, []);
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [mounted, onAddStop]);
 
-  const handlePopupClose = useCallback(() => {
-    setPopupInfo(null);
-  }, []);
+  // Update markers and polyline when data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear old markers
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
+
+    // Clear old polyline
+    if (polylineRef.current) {
+      polylineRef.current.remove();
+      polylineRef.current = null;
+    }
+
+    const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
+
+    // Add polyline
+    if (routeGeometry.length > 0) {
+      const polyline = L.polyline(
+        routeGeometry.map((c) => [c.lat, c.lng] as [number, number]),
+        {
+          color: "#3b82f6",
+          weight: 4,
+          opacity: 0.8,
+        },
+      ).addTo(map);
+      polylineRef.current = polyline;
+    }
+
+    // Add markers
+    const markers = routeToShow.map((venue, index) => {
+      const marker = L.marker(
+        [venue.coordinates.lat, venue.coordinates.lng],
+        {
+          icon: createCategoryIcon(venue.category, !!venue.isFeatured, index),
+        },
+      ).addTo(map);
+
+      const popupContent = `
+        <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; max-width: 220px;">
+          <p style="font-weight: 600; margin: 0 0 2px 0; font-size: 14px;">${venue.name}</p>
+          <p style="color: #6b7280; font-size: 12px; margin: 0 0 4px 0;">
+            ${VENUE_CATEGORY_ICONS[venue.category]} ${VENUE_CATEGORY_LABELS[venue.category]}
+            ${venue.isFeatured ? '<span style="display:inline-block;margin-left:4px;background:#fef3c7;color:#92400e;font-size:11px;padding:0 5px;border-radius:4px;font-weight:600;">⭐ Destacado</span>' : ""}
+          </p>
+          <p style="color: #6b7280; font-size: 11px; margin: 0 0 4px 0;">📍 ${venue.address}</p>
+          ${venue.timeWindow?.estimatedArrival ? `<p style="color: #2563eb; font-weight: 500; margin: 0; font-size: 12px;">🕐 Llegada: ${venue.timeWindow.estimatedArrival}</p>` : ""}
+          ${venue.timeWindow?.deadline ? `<p style="color: #dc2626; font-weight: 500; margin: 0; font-size: 12px;">⏰ Límite: ${venue.timeWindow.deadline}</p>` : ""}
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      return marker;
+    });
+
+    markersRef.current = markers;
+  }, [stops, optimizedRoute, routeGeometry]);
+
+  if (!mounted) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-muted/30 rounded-lg border border-border">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Cargando mapa...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full rounded-lg overflow-hidden border border-border relative">
-      <Map
-        {...viewport}
-        onMove={handleMove}
-        onMoveEnd={handleMoveEnd}
-        mapStyle={mapStyle}
-        onClick={handleMapClick}
-        attributionControl={false}
-      >
-        {/* Route line */}
-        {routeGeometry.length > 0 && (
-          <svg
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none",
-            }}
-          >
-            {/* Route polyline would be rendered here via canvas/SVG overlay */}
-          </svg>
-        )}
-
-        {/* Markers */}
-        {routeToShow.map((venue, index) => (
-          <Marker
-            key={venue.id}
-            longitude={venue.coordinates.lng}
-            latitude={venue.coordinates.lat}
-            onClick={(e) => {
-              e.originalEvent.stopPropagation();
-              setPopupInfo({
-                lng: venue.coordinates.lng,
-                lat: venue.coordinates.lat,
-                venue,
-                index,
-              });
-            }}
-          >
-            <div
-              style={{
-                background: VENUE_CATEGORY_COLORS[venue.category],
-                color: "white",
-                width: venue.isFeatured ? "32px" : "28px",
-                height: venue.isFeatured ? "32px" : "28px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "13px",
-                fontWeight: "bold",
-                border: `${venue.isFeatured ? "3px" : "2px"} solid ${venue.isFeatured ? "#fbbf24" : "white"}`,
-                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-                cursor: "pointer",
-              }}
-              title={venue.name}
-            >
-              {index + 1}
-            </div>
-          </Marker>
-        ))}
-
-        {/* Popup */}
-        {popupInfo && (
-          <Popup
-            longitude={popupInfo.lng}
-            latitude={popupInfo.lat}
-            onClose={handlePopupClose}
-            offset={25}
-          >
-            <div
-              style={{
-                fontFamily: "system-ui, sans-serif",
-                fontSize: "13px",
-                lineHeight: "1.4",
-                maxWidth: "220px",
-              }}
-            >
-              <p
-                style={{
-                  fontWeight: 600,
-                  margin: "0 0 2px 0",
-                  fontSize: "14px",
-                }}
-              >
-                {popupInfo.venue.name}
-              </p>
-              <p
-                style={{
-                  color: "#6b7280",
-                  fontSize: "12px",
-                  margin: "0 0 4px 0",
-                }}
-              >
-                {VENUE_CATEGORY_ICONS[popupInfo.venue.category]}{" "}
-                {VENUE_CATEGORY_LABELS[popupInfo.venue.category]}
-                {popupInfo.venue.isFeatured && (
-                  <span
-                    style={{
-                      display: "inline-block",
-                      marginLeft: "4px",
-                      background: "#fef3c7",
-                      color: "#92400e",
-                      fontSize: "11px",
-                      padding: "0 5px",
-                      borderRadius: "4px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    ⭐ Destacado
-                  </span>
-                )}
-              </p>
-              <p
-                style={{
-                  color: "#6b7280",
-                  fontSize: "11px",
-                  margin: "0 0 4px 0",
-                }}
-              >
-                📍 {popupInfo.venue.address}
-              </p>
-              {popupInfo.venue.timeWindow?.estimatedArrival && (
-                <p
-                  style={{
-                    color: "#2563eb",
-                    fontWeight: 500,
-                    margin: 0,
-                    fontSize: "12px",
-                  }}
-                >
-                  🕐 Llegada: {popupInfo.venue.timeWindow.estimatedArrival}
-                </p>
-              )}
-              {popupInfo.venue.timeWindow?.deadline && (
-                <p
-                  style={{
-                    color: "#dc2626",
-                    fontWeight: 500,
-                    margin: 0,
-                    fontSize: "12px",
-                  }}
-                >
-                  ⏰ Límite: {popupInfo.venue.timeWindow.deadline}
-                </p>
-              )}
-            </div>
-          </Popup>
-        )}
-      </Map>
+      <div ref={mapContainerRef} className="h-full w-full" />
 
       {/* Loading overlay when clicking on map */}
       {isReversing && (
@@ -299,7 +253,6 @@ function MapView({
 }
 
 export default memo(MapView, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if these specific props changed
   if (prevProps.stops !== nextProps.stops) return false;
   if (prevProps.optimizedRoute !== nextProps.optimizedRoute) return false;
   if (prevProps.routeGeometry !== nextProps.routeGeometry) return false;
