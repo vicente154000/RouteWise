@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
 import Map, { Marker, Popup } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { MapMouseEvent } from "maplibre-gl";
@@ -33,7 +33,7 @@ interface PopupInfo {
   index: number;
 }
 
-export default function MapView({
+function MapView({
   stops,
   optimizedRoute,
   routeGeometry,
@@ -45,6 +45,7 @@ export default function MapView({
   useEffect(() => {
     setMounted(true);
   }, []);
+
   const [isReversing, setIsReversing] = useState(false);
   const [popupInfo, setPopupInfo] = useState<PopupInfo | null>(null);
   const [viewport, setViewport] = useState({
@@ -53,10 +54,13 @@ export default function MapView({
     zoom: 5,
   });
 
+  // Ref to track if a move was just from user interaction
+  const isMovingRef = useRef(false);
+
   const routeToShow = optimizedRoute.length > 0 ? optimizedRoute : stops;
-  const mapStyle = mounted 
-  ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light) 
-  : STYLE_URLS.light;
+  const mapStyle = mounted
+    ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light)
+    : STYLE_URLS.light;
 
   const handleMapClick = async (e: MapMouseEvent) => {
     const { lng, lat } = e.lngLat;
@@ -91,13 +95,29 @@ export default function MapView({
     } finally {
       setIsReversing(false);
     }
-  };
+  }, [onAddStop]);
+
+  // Only update viewport state when user stops moving (onMoveEnd)
+  // This avoids re-rendering on every single pixel of pan/zoom
+  const handleMoveEnd = useCallback((evt: { viewState: { longitude: number; latitude: number; zoom: number } }) => {
+    setViewport(evt.viewState);
+    isMovingRef.current = false;
+  }, []);
+
+  const handleMove = useCallback(() => {
+    isMovingRef.current = true;
+  }, []);
+
+  const handlePopupClose = useCallback(() => {
+    setPopupInfo(null);
+  }, []);
 
   return (
     <div className="h-full w-full rounded-lg overflow-hidden border border-border relative">
       <Map
         {...viewport}
-        onMove={(evt) => setViewport(evt.viewState)}
+        onMove={handleMove}
+        onMoveEnd={handleMoveEnd}
         mapStyle={mapStyle}
         onClick={handleMapClick}
         attributionControl={false}
@@ -162,7 +182,7 @@ export default function MapView({
           <Popup
             longitude={popupInfo.lng}
             latitude={popupInfo.lat}
-            onClose={() => setPopupInfo(null)}
+            onClose={handlePopupClose}
             offset={25}
           >
             <div style={{
@@ -230,3 +250,12 @@ export default function MapView({
     </div>
   );
 }
+
+export default memo(MapView, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these specific props changed
+  if (prevProps.stops !== nextProps.stops) return false;
+  if (prevProps.optimizedRoute !== nextProps.optimizedRoute) return false;
+  if (prevProps.routeGeometry !== nextProps.routeGeometry) return false;
+  if (prevProps.onAddStop !== nextProps.onAddStop) return false;
+  return true;
+});
