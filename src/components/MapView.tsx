@@ -62,7 +62,7 @@ function MapView({
     ? (theme === "dark" ? STYLE_URLS.dark : STYLE_URLS.light)
     : STYLE_URLS.light;
 
-  const handleMapClick = async (e: MapMouseEvent) => {
+  const handleMapClick = useCallback(async (e: MapMouseEvent) => {
     const { lng, lat } = e.lngLat;
     setIsReversing(true);
 
