@@ -1,0 +1,39 @@
+{
+  "info": {
+    "name": "RouteWise - Basic",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Search Venues (placeholder)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/search?q=restaurante",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "search"],
+          "query": [{ "key": "q", "value": "restaurante" }]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Optimize Route (placeholder)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"stops\": [ { \"lat\": 40.4168, \"lng\": -3.7038 }, { \"lat\": 40.418, \"lng\": -3.702 } ] }"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/optimize",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "optimize"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
