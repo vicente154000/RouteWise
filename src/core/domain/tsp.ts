@@ -187,38 +187,64 @@ export function optimizeRoute(stops: Venue[], config?: TSPConfig): Venue[] {
  * Compute estimated arrival times for each stop in the route.
  * Assumes start time is 08:00 and each stop takes 10 minutes.
  */
+/**
+ * Compute estimated arrival times or cumulative durations for each stop in the route.
+ * If startTime is provided, computes exact HH:MM. Otherwise, computes cumulative duration.
+ */
 export function computeArrivalTimes(
   route: Venue[],
   segments: RouteSegment[],
-  startTime: string = "08:00",
+  startTime?: string,
 ): Venue[] {
   if (route.length === 0) return route;
 
-  const [startHours, startMinutes] = startTime.split(":").map(Number);
-  let currentSeconds = startHours * 3600 + startMinutes * 60;
-  const STOP_DURATION_SECONDS = 10 * 60; // 10 min per stop
+  const hasStartTime = startTime && startTime.trim() !== "";
+
+  // Variables para hora exacta
+  let currentSeconds = 0;
+  if (hasStartTime) {
+    const [startHours, startMinutes] = startTime.split(":").map(Number);
+    currentSeconds = startHours * 3600 + startMinutes * 60;
+  }
+
+  // Variable para duración acumulada (en minutos)
+  let cumulativeMinutes = 0;
+  const STOP_DURATION_SECONDS = 10 * 60; // 10 min por parada
 
   return route.map((stop, index) => {
+    // Sumar la duración del trayecto anterior
     if (index > 0 && segments[index - 1]) {
-      currentSeconds += segments[index - 1].duration;
+      if (hasStartTime) {
+        currentSeconds += segments[index - 1].duration;
+      }
+      cumulativeMinutes += Math.round(segments[index - 1].duration / 60);
     }
 
-    const hours = Math.floor(currentSeconds / 3600);
-    const minutes = Math.floor((currentSeconds % 3600) / 60);
-    const estimatedArrival = `${String(hours).padStart(2, "0")}:${String(
-      minutes,
-    ).padStart(2, "0")}`;
+    let displayValue = "";
 
-    // Add stop duration (except for last stop)
-    if (index < route.length - 1) {
-      currentSeconds += STOP_DURATION_SECONDS;
+    if (hasStartTime) {
+      const hours = Math.floor(currentSeconds / 3600) % 24; // %24 por si pasa de la medianoche
+      const minutes = Math.floor((currentSeconds % 3600) / 60);
+      displayValue = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+
+      // Sumar el tiempo que el usuario pasa en este lugar (excepto el último)
+      if (index < route.length - 1) {
+        currentSeconds += STOP_DURATION_SECONDS;
+      }
+    } else {
+      displayValue = `+${cumulativeMinutes} min`;
+
+      // Sumar los 10 minutos de estancia a la duración acumulada para la siguiente parada
+      if (index < route.length - 1) {
+        cumulativeMinutes += 10;
+      }
     }
 
     return {
       ...stop,
       timeWindow: {
         ...stop.timeWindow,
-        estimatedArrival,
+        estimatedArrival: displayValue,
       },
     } as Venue;
   });
