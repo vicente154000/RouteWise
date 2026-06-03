@@ -185,40 +185,62 @@ export function optimizeRoute(stops: Venue[], config?: TSPConfig): Venue[] {
 
 /**
  * Compute estimated arrival times for each stop in the route.
- * Assumes start time is 08:00 and each stop takes 10 minutes.
+ * Assumes each stop takes 10 minutes.
+ * If startTime is provided, calculates exact HH:MM windows.
+ * If startTime is empty/undefined, shows relative cumulative duration.
  */
 export function computeArrivalTimes(
   route: Venue[],
   segments: RouteSegment[],
-  startTime: string = "08:00",
+  startTime?: string,
 ): Venue[] {
   if (route.length === 0) return route;
 
-  const [startHours, startMinutes] = startTime.split(":").map(Number);
-  let currentSeconds = startHours * 3600 + startMinutes * 60;
-  const STOP_DURATION_SECONDS = 10 * 60; // 10 min per stop
+  const hasStartTime = startTime && startTime.trim() !== "";
+
+  let currentSeconds = 0;
+  if (hasStartTime) {
+    const [startHours, startMinutes] = startTime.split(":").map(Number);
+    currentSeconds = startHours * 3600 + startMinutes * 60;
+  }
+
+  let cumulativeMinutes = 0;
+  const STOP_DURATION_SECONDS = 10 * 60; // 10 min por parada
 
   return route.map((stop, index) => {
+    // Sumar el tiempo de trayecto desde la parada anterior
     if (index > 0 && segments[index - 1]) {
-      currentSeconds += segments[index - 1].duration;
+      if (hasStartTime) {
+        currentSeconds += segments[index - 1].duration;
+      }
+      cumulativeMinutes += Math.round(segments[index - 1].duration / 60);
     }
 
-    const hours = Math.floor(currentSeconds / 3600);
-    const minutes = Math.floor((currentSeconds % 3600) / 60);
-    const estimatedArrival = `${String(hours).padStart(2, "0")}:${String(
-      minutes,
-    ).padStart(2, "0")}`;
+    let displayArrival = "";
 
-    // Add stop duration (except for last stop)
-    if (index < route.length - 1) {
-      currentSeconds += STOP_DURATION_SECONDS;
+    if (hasStartTime) {
+      const hours = Math.floor(currentSeconds / 3600) % 24;
+      const minutes = Math.floor((currentSeconds % 3600) / 60);
+      displayArrival = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+
+      // Sumar la estancia fija en esta parada para la siguiente (excepto última)
+      if (index < route.length - 1) {
+        currentSeconds += STOP_DURATION_SECONDS;
+      }
+    } else {
+      displayArrival = `+${cumulativeMinutes} min`;
+
+      // Sumar los 10 minutos de estancia acumulados para el siguiente destino
+      if (index < route.length - 1) {
+        cumulativeMinutes += 10;
+      }
     }
 
     return {
       ...stop,
       timeWindow: {
         ...stop.timeWindow,
-        estimatedArrival,
+        estimatedArrival: displayArrival,
       },
     } as Venue;
   });
