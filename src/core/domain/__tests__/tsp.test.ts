@@ -104,4 +104,22 @@ describe("TSP Domain Logic", () => {
     // 08:30 + 10m estancia + 10m trayecto = 08:50
     expect(routeWithTimes[1].timeWindow?.estimatedArrival).toBe("08:50");
   });
+  it("computeArrivalTimes calcula solo duración acumulada relativa si startTime está vacío", () => {
+    const mockSegments = [
+      { distance: 0.5, duration: 300, geometry: [] }, // 5 minutos de trayecto
+    ];
+
+    // Pasamos un string vacío como startTime
+    const route = computeArrivalTimes(
+      [mockVenues[0], mockVenues[1]],
+      mockSegments,
+      "",
+    );
+
+    // Parada inicial: sin tiempo acumulado
+    expect(route[0].timeWindow?.estimatedArrival).toBe("+0 min");
+
+    // Parada 2: 0 min + 10 min de estancia en Parada 1 + 5 min de viaje = +15 min
+    expect(route[1].timeWindow?.estimatedArrival).toBe("+15 min");
+  });
 });
