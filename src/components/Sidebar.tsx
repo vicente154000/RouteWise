@@ -10,6 +10,7 @@ import {
   Plus,
   Route,
   Copy,
+  Share2,
   Loader2,
   Navigation,
   Trash2,
@@ -178,6 +179,26 @@ export default function Sidebar({
 
     await navigator.clipboard.writeText(text);
     toast.success("Ruta copiada al portapapeles");
+  };
+
+  const handleShareRoute = async () => {
+    const routeToShare = isOptimized ? optimizedRoute : stops;
+
+    // Encode venue data as a compact JSON array in the URL
+    // Each venue: [name, address, lat, lng, category, isFeatured?]
+    const venueData = routeToShare.map((v) => [
+      v.name,
+      v.address,
+      v.coordinates.lat.toFixed(6),
+      v.coordinates.lng.toFixed(6),
+      v.category,
+      v.isFeatured ? 1 : 0,
+    ]);
+    const encoded = encodeURIComponent(JSON.stringify(venueData));
+    const url = `${window.location.origin}${window.location.pathname}?venues=${encoded}`;
+
+    await navigator.clipboard.writeText(url);
+    toast.success("URL del itinerario copiada al portapapeles");
   };
 
   const handleToggleTheme = () => {
@@ -423,6 +444,16 @@ export default function Sidebar({
           >
             <Copy className="h-4 w-4" />
             Copiar ruta
+          </Button>
+
+          <Button
+            variant="outline"
+            className="flex-1 gap-2"
+            onClick={handleShareRoute}
+            disabled={stops.length === 0 || isOptimizing}
+          >
+            <Share2 className="h-4 w-4" />
+            Compartir
           </Button>
 
           <Button

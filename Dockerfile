@@ -10,7 +10,7 @@ WORKDIR /app
 # ---- Stage 2: Dependencies ----
 FROM base AS deps
 COPY package.json package-lock.json ./
-RUN npm ci --only=production
+RUN npm ci --ignore-scripts && npm prune --production
 
 # ---- Stage 3: Build ----
 FROM base AS build
