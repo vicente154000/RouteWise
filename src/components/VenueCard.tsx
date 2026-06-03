@@ -40,6 +40,10 @@ export default function VenueCard({
   const categoryIcon = VENUE_CATEGORY_ICONS[venue.category];
   const categoryLabel = VENUE_CATEGORY_LABELS[venue.category];
 
+  const arrival = venue.timeWindow?.estimatedArrival;
+  // <-- CAMBIO: Si no contiene un "+", sabemos que calcula una hora exacta (HH:MM)
+  const isExactTime = arrival && !arrival.includes("+");
+
   return (
     <div
       className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 hover:bg-accent/50 transition-all duration-300"
@@ -99,11 +103,13 @@ export default function VenueCard({
 
       {/* Time info row */}
       <div className="flex items-center gap-3 pl-8">
-        {/* Estimated arrival */}
-        {venue.timeWindow?.estimatedArrival && (
-          <div className="flex items-center gap-1 text-xs text-blue-600 transition-all duration-300">
+        {/* <-- CAMBIO: Muestra el tiempo estimado ajustando el texto dinámicamente si es hora exacta o duración acumulada */}
+        {arrival && (
+          <div className="flex items-center gap-1 text-xs text-blue-600 transition-all duration-300 font-mono">
             <Clock className="h-3 w-3" />
-            <span>Llegada: {venue.timeWindow.estimatedArrival}</span>
+            <span>
+              {isExactTime ? `Llegada: ${arrival}` : `Llegada: ${arrival}`}
+            </span>
           </div>
         )}
 
