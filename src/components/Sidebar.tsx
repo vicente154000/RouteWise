@@ -1,5 +1,5 @@
 "use client";
-
+import { Input } from "./ui/input";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import VenueList from "./VenueList";
 import type { Venue, Coordinate } from "@/core/domain/venue";
 import type { Suggestion } from "@/core/infrastructure/geocoding";
 import { routeOptimizationService } from "@/core/infrastructure/dependencies";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 interface SidebarProps {
   stops: Venue[];
@@ -50,6 +51,10 @@ export default function Sidebar({
   const [error, setError] = useState<string | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [roadDuration, setRoadDuration] = useState<number | null>(null);
+  const [startTime, setStartTime] = useLocalStorage<string>(
+    "routewise-start-time",
+    "08:00",
+  );
 
   const handleSelectSuggestion = (suggestion: Suggestion | Venue) => {
     // If a Venue is passed (from VenueAutocomplete), add it directly
@@ -119,7 +124,7 @@ export default function Sidebar({
     setError(null);
 
     try {
-      const result = await routeOptimizationService.optimize(stops);
+      const result = await routeOptimizationService.optimize(stops, startTime);
 
       if (result) {
         setOptimizedRoute(result.venues);
@@ -225,7 +230,18 @@ export default function Sidebar({
       </div>
 
       <Separator />
-
+      <div className="px-4 py-3 border-b bg-muted/30 space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5 text-primary" />
+          Hora de inicio del recorrido
+        </label>
+        <Input
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className="w-full cursor-pointer font-mono text-center text-sm tracking-wide h-9 bg-background focus-visible:ring-1"
+        />
+      </div>
       {/* Add stop form with autocomplete */}
       <div className="p-4 space-y-2">
         <div className="flex gap-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo, useRef } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 import "leaflet/dist/leaflet.css";
 import type { Venue, Coordinate } from "@/core/domain/venue";
 import {
