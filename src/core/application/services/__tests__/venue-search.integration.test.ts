@@ -4,8 +4,7 @@ import { VenueSearchService } from "../VenueSearchService";
 import { RouteOptimizationService } from "../RouteOptimizationService";
 import type { IVenueRepository } from "../../../infrastructure/repositories/IVenueRepository";
 import type { IRoutingService } from "../../../infrastructure/repositories/IRoutingService";
-import type { Coordinate, Venue } from "../../../domain/venue";
-import type { RouteResult, RouteSegment } from "../../../domain/tsp";
+import type { Venue } from "../../../domain/venue";
 
 describe("VenueSearchService Integration", () => {
   // Mock individual usando valores válidos del dominio real
@@ -98,10 +97,7 @@ describe("RouteOptimizationService Integration", () => {
           { lat: 42.816, lng: -1.643 },
         ],
       }),
-      getRoute: function (
-        from: Coordinate,
-        to: Coordinate,
-      ): Promise<RouteSegment | null> {
+      getRoute: () => {
         throw new Error("Function not implemented.");
       },
     };
