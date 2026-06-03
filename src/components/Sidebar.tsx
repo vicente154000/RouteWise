@@ -1,6 +1,6 @@
 "use client";
 import { Input } from "./ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import VenueAutocomplete from "./VenueAutocomplete";
 import VenueList from "./VenueList";
+import VenueDetailModal from "./VenueDetailModal";
 import type { Venue, Coordinate } from "@/core/domain/venue";
 import type { Suggestion } from "@/core/infrastructure/geocoding";
 import { routeOptimizationService } from "@/core/infrastructure/dependencies";
@@ -56,6 +57,21 @@ export default function Sidebar({
     "routewise-start-time",
     "08:00",
   );
+
+  // Venue detail modal state
+  const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
+  const [detailIndex, setDetailIndex] = useState(0);
+
+  const handleShowDetail = useCallback((venue: Venue) => {
+    const displayVenues = isOptimized ? optimizedRoute : stops;
+    const idx = displayVenues.findIndex((v) => v.id === venue.id);
+    setDetailVenue(venue);
+    setDetailIndex(idx >= 0 ? idx : 0);
+  }, [isOptimized, optimizedRoute, stops]);
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailVenue(null);
+  }, []);
 
   const handleSelectSuggestion = (suggestion: Suggestion | Venue) => {
     // If a Venue is passed (from VenueAutocomplete), add it directly
@@ -375,6 +391,7 @@ export default function Sidebar({
             onUpdateDeadline={handleUpdateDeadline}
             isOptimized={isOptimized}
             isOptimizing={isOptimizing}
+            onShowDetail={handleShowDetail}
           />
         )}
       </div>
@@ -467,6 +484,15 @@ export default function Sidebar({
           </Button>
         </div>
       </div>
+
+      {/* Venue detail modal */}
+      <VenueDetailModal
+        venue={detailVenue}
+        index={detailIndex}
+        total={isOptimized ? optimizedRoute.length : stops.length}
+        isOpen={detailVenue !== null}
+        onClose={handleCloseDetail}
+      />
     </div>
   );
 }

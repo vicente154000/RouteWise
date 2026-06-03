@@ -1,0 +1,50 @@
+# ============================================================
+# docker-compose.dev.yml — RouteWise Development Environment
+# ============================================================
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d     # Start dev services
+#   docker compose -f docker-compose.dev.yml down       # Stop dev services
+#
+# Features:
+#   - Hot reload via mounted volumes (next dev)
+#   - No need to rebuild on code changes
+#   - Shares OSRM service with production compose
+# ============================================================
+
+services:
+  # ---- RouteWise App (Next.js 14 - Development) ----
+  routewise-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./package.json:/app/package.json
+      - ./next.config.mjs:/app/next.config.mjs
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./components.json:/app/components.json
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_OSRM_BASE_URL=http://localhost:5000
+      - CHOKIDAR_USEPOLLING=true  # Enable file watching in Docker
+      - WATCHPACK_POLLING=true     # Enable webpack polling for HMR
+    restart: unless-stopped
+    depends_on:
+      - osrm-dev
+
+  # ---- OSRM Backend (Open Source Routing Machine) ----
+  osrm-dev:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data
+    command: >
+      sh -c "osrm-routed --algorithm mld /data/madrid.osrm"
+    restart: unless-stopped
