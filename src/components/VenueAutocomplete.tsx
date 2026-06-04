@@ -1,10 +1,7 @@
 "use client";
 
-
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-
-
 import { Loader2, MapPin, Store, Search, Star } from "lucide-react";
 import {
   searchSuggestions,
@@ -17,8 +14,7 @@ import {
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
 } from "@/core/domain/venue";
-
-import CategorySelector from "./CategorySelector"; // <-- IMPORTANTE: Añadir importación
+import CategorySelector from "./CategorySelector";
 
 interface VenueSuggestion {
   type: "local" | "overpass" | "nominatim";
@@ -34,18 +30,10 @@ interface VenueAutocompleteProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
   selectedCategories: VenueCategory[];
   setSelectedCategories: (categories: VenueCategory[]) => void;
-  onlyFeatured: boolean; // <-- CAMBIO: Añadido[cite: 1]
-
-  setOnlyFeatured: (featured: boolean) => void; // <-- CAMBIO: Añadido[cite: 1]
-
-
-
+  onlyFeatured: boolean;
+  setOnlyFeatured: (featured: boolean) => void;
   disabled?: boolean;
 }
-
-
-
-
 
 export default function VenueAutocomplete({
   value,
@@ -54,9 +42,9 @@ export default function VenueAutocomplete({
   onKeyDown,
   selectedCategories: categoryFilter,
   setSelectedCategories,
-  onlyFeatured, // <-- CAMBIO: Añadido[cite: 1]
-  setOnlyFeatured, // <-- CAMBIO: Añadido[cite: 1]
-    disabled = false,
+  onlyFeatured,
+  setOnlyFeatured,
+  disabled = false,
 }: VenueAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<VenueSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +54,6 @@ export default function VenueAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // <-- CAMBIO: Actualizar el placeholder del input según filtros activos[cite: 1]
   const placeholderText = useMemo(() => {
     if (categoryFilter.length === 3) {
       return onlyFeatured
@@ -80,8 +67,7 @@ export default function VenueAutocomplete({
     return onlyFeatured
       ? `Buscar ${baseText} destacados...`
       : `Buscar ${baseText}...`;
-
-    }, [categoryFilter, onlyFeatured]);
+  }, [categoryFilter, onlyFeatured]);
 
   const handleSelect = useCallback(
     (item: VenueSuggestion) => {
@@ -93,8 +79,7 @@ export default function VenueAutocomplete({
           name: item.suggestion.displayName.split(",")[0].trim(),
           address: item.suggestion.displayName,
           coordinates: item.suggestion.coordinates,
-    
-          category: categoryFilter[0] || "restaurant", // Usa una de las categorías seleccionadas por el usuario
+          category: categoryFilter[0] || "restaurant",
           isFeatured: false,
         };
         onSelect(venue);
@@ -105,12 +90,9 @@ export default function VenueAutocomplete({
       setShowDropdown(false);
       setSuggestions([]);
     },
-
-
     [onChange, onSelect, categoryFilter],
   );
 
-  // Fetch suggestions with debounce
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -129,11 +111,7 @@ export default function VenueAutocomplete({
       const results: VenueSuggestion[] = [];
 
       try {
-
-
-
-
-        // 1. Capa Local: Filtrado combinado simultáneo[cite: 1]
+        // 1. Capa Local
         const localVenues = searchLocalVenues(trimmed);
         localVenues.forEach((v: Venue) => {
           const matchesCategory = categoryFilter.includes(v.category);
@@ -145,14 +123,10 @@ export default function VenueAutocomplete({
               venue: v,
               displayName: v.name,
             });
-
-
           }
         });
 
-
-
-        // 2. Capa Overpass (OSM): Filtrado combinado simultáneo[cite: 1]
+        // 2. Capa Overpass (OSM)
         if (results.length < 5) {
           const overpassVenues = await searchOverpassVenues(trimmed);
           overpassVenues.forEach((v) => {
@@ -162,8 +136,7 @@ export default function VenueAutocomplete({
             const matchesCategory = categoryFilter.includes(v.category);
             const matchesFeatured = !onlyFeatured || v.isFeatured;
 
-
-if (!isDuplicate && matchesCategory && matchesFeatured) {
+            if (!isDuplicate && matchesCategory && matchesFeatured) {
               results.push({
                 type: "overpass",
                 venue: v,
@@ -173,9 +146,7 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
           });
         }
 
-        // 3. Capa Nominatim (Direcciones): Se ignora si se busca exclusivamente destacados[cite: 1]
-
-
+        // 3. Capa Nominatim
         if (results.length === 0 && trimmed.length >= 3 && !onlyFeatured) {
           const nominatimResults = await searchSuggestions(trimmed);
           nominatimResults.forEach((s) => {
@@ -187,14 +158,9 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
           });
         }
       } catch {
-
-
-
-
-        // Si falla, el arreglo se queda vacío de forma segura
+        // Fallará silenciosamente dejando el arreglo vacío de forma segura
       } finally {
         setSuggestions(results.slice(0, 8));
-
         setShowDropdown(results.length > 0);
         setSelectedIndex(-1);
         setIsLoading(false);
@@ -204,10 +170,8 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
+  }, [value, categoryFilter, onlyFeatured]);
 
-  }, [value, categoryFilter, onlyFeatured]); // <-- CAMBIO: Escuchar de forma combinada[cite: 1]
-
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -286,7 +250,6 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
 
   return (
     <div className="w-full space-y-2.5 flex-1">
-      {/* <-- CAMBIO: Integrar el CategorySelector y el toggle "Solo destacados"[cite: 1] */}
       <div className="bg-muted/30 p-2 rounded-lg border border-border/70 space-y-2">
         <CategorySelector
           selected={categoryFilter}
@@ -312,7 +275,7 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
       <div className="relative w-full">
         <Input
           ref={inputRef}
-          placeholder={placeholderText} // <-- CAMBIO: Usar el hook de texto variable[cite: 1]
+          placeholder={placeholderText}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -324,23 +287,19 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
           }}
           disabled={disabled}
           className="w-full pr-8"
-
-/>
+        />
 
         {isLoading && (
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
+        )}
 
-)}
-
-        {/* Suggestions dropdown */}
         {showDropdown && suggestions.length > 0 && (
           <div
             ref={dropdownRef}
             className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-y-auto flex flex-col"
           >
-            {/* <-- CAMBIO: Mostrar los badges de los filtros activos encima de los resultados[cite: 1] */}
             <div className="px-3 py-1.5 bg-muted/50 border-b border-border flex flex-wrap gap-1 items-center">
               <span className="text-[10px] font-medium text-muted-foreground mr-1">
                 Filtros activos:
@@ -382,7 +341,6 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
                       : item.venue
                         ? VENUE_CATEGORY_ICONS[item.venue.category]
                         : "📍"}
-
                   </span>
 
                   <div className="min-w-0 flex-1">
@@ -398,7 +356,6 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
                           ? `${item.venue.address} · ${VENUE_CATEGORY_LABELS[item.venue.category]}${item.venue.isFeatured ? " · ⭐ Destacado" : ""}`
                           : ""}
                     </span>
-
                   </div>
 
                   <span className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5 mt-0.5">
@@ -410,7 +367,6 @@ if (!isDuplicate && matchesCategory && matchesFeatured) {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
