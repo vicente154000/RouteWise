@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { Loader2, MapPin, Store, Search } from "lucide-react";
+import { Loader2, MapPin, Store, Search, Star } from "lucide-react";
 import {
   searchSuggestions,
   type Suggestion,
@@ -14,6 +14,7 @@ import {
   VENUE_CATEGORY_ICONS,
   VENUE_CATEGORY_LABELS,
 } from "@/core/domain/venue";
+import CategorySelector from "./CategorySelector";
 
 interface VenueSuggestion {
   type: "local" | "overpass" | "nominatim";
@@ -27,25 +28,23 @@ interface VenueAutocompleteProps {
   onChange: (value: string) => void;
   onSelect: (venue: Venue) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
-  categoryFilter?: VenueCategory[];
+  selectedCategories: VenueCategory[];
+  setSelectedCategories: (categories: VenueCategory[]) => void;
+  onlyFeatured: boolean;
+  setOnlyFeatured: (featured: boolean) => void;
   disabled?: boolean;
-  placeholder?: string;
 }
 
-/**
- * Autocomplete component that searches venues from three sources:
- * 1. Local catalog (offline, instant)
- * 2. Overpass API (OSM venues by name)
- * 3. Nominatim (address fallback)
- */
 export default function VenueAutocomplete({
   value,
   onChange,
   onSelect,
   onKeyDown,
-  categoryFilter,
+  selectedCategories: categoryFilter,
+  setSelectedCategories,
+  onlyFeatured,
+  setOnlyFeatured,
   disabled = false,
-  placeholder = "Busca un restaurante, bar o discoteca...",
 }: VenueAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<VenueSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,18 +54,32 @@ export default function VenueAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const placeholderText = useMemo(() => {
+    if (categoryFilter.length === 3) {
+      return onlyFeatured
+        ? "Buscar destacados..."
+        : "Busca un restaurante, bar o discoteca...";
+    }
+    const labels = categoryFilter.map(
+      (c) => VENUE_CATEGORY_LABELS[c].toLowerCase() + "s",
+    );
+    const baseText = labels.join(" o ");
+    return onlyFeatured
+      ? `Buscar ${baseText} destacados...`
+      : `Buscar ${baseText}...`;
+  }, [categoryFilter, onlyFeatured]);
+
   const handleSelect = useCallback(
     (item: VenueSuggestion) => {
       onChange(item.displayName);
 
       if (item.type === "nominatim" && item.suggestion) {
-        // Convert Nominatim suggestion to Venue
         const venue: Venue = {
           id: crypto.randomUUID(),
           name: item.suggestion.displayName.split(",")[0].trim(),
           address: item.suggestion.displayName,
           coordinates: item.suggestion.coordinates,
-          category: "restaurant",
+          category: categoryFilter[0] || "restaurant",
           isFeatured: false,
         };
         onSelect(venue);
@@ -77,10 +90,9 @@ export default function VenueAutocomplete({
       setShowDropdown(false);
       setSuggestions([]);
     },
-    [onChange, onSelect],
+    [onChange, onSelect, categoryFilter],
   );
 
-  // Fetch suggestions with debounce
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -99,22 +111,32 @@ export default function VenueAutocomplete({
       const results: VenueSuggestion[] = [];
 
       try {
-        // 1. Search local catalog first (instant, offline)
+        // 1. Capa Local
         const localVenues = searchLocalVenues(trimmed);
         localVenues.forEach((v: Venue) => {
-          results.push({
-            type: "local",
-            venue: v,
-            displayName: v.name,
-          });
+          const matchesCategory = categoryFilter.includes(v.category);
+          const matchesFeatured = !onlyFeatured || v.isFeatured;
+
+          if (matchesCategory && matchesFeatured) {
+            results.push({
+              type: "local",
+              venue: v,
+              displayName: v.name,
+            });
+          }
         });
 
-        // 2. Search Overpass API (OSM venues)
+        // 2. Capa Overpass (OSM)
         if (results.length < 5) {
           const overpassVenues = await searchOverpassVenues(trimmed);
           overpassVenues.forEach((v) => {
-            // Avoid duplicates with local results
-            if (!results.some((r) => r.displayName === v.name)) {
+            const isDuplicate = results.some(
+              (r) => r.displayName.toLowerCase() === v.name.toLowerCase(),
+            );
+            const matchesCategory = categoryFilter.includes(v.category);
+            const matchesFeatured = !onlyFeatured || v.isFeatured;
+
+            if (!isDuplicate && matchesCategory && matchesFeatured) {
               results.push({
                 type: "overpass",
                 venue: v,
@@ -124,8 +146,8 @@ export default function VenueAutocomplete({
           });
         }
 
-        // 3. Fallback to Nominatim for address search
-        if (results.length === 0 && trimmed.length >= 3) {
+        // 3. Capa Nominatim
+        if (results.length === 0 && trimmed.length >= 3 && !onlyFeatured) {
           const nominatimResults = await searchSuggestions(trimmed);
           nominatimResults.forEach((s) => {
             results.push({
@@ -136,21 +158,10 @@ export default function VenueAutocomplete({
           });
         }
       } catch {
-        // If all fail, show empty
+        // Fallará silenciosamente dejando el arreglo vacío de forma segura
       } finally {
-        // Apply category filter if set
-        const filtered =
-          categoryFilter &&
-          categoryFilter.length > 0 &&
-          categoryFilter.length < 3
-            ? results.filter((r) => {
-                if (r.type === "nominatim") return true; // Nominatim results pass through
-                return r.venue && categoryFilter.includes(r.venue.category);
-              })
-            : results;
-
-        setSuggestions(filtered.slice(0, 8));
-        setShowDropdown(filtered.length > 0);
+        setSuggestions(results.slice(0, 8));
+        setShowDropdown(results.length > 0);
         setSelectedIndex(-1);
         setIsLoading(false);
       }
@@ -159,9 +170,8 @@ export default function VenueAutocomplete({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [value, categoryFilter]);
+  }, [value, categoryFilter, onlyFeatured]);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -239,78 +249,125 @@ export default function VenueAutocomplete({
   };
 
   return (
-    <div className="relative flex-1">
-      <Input
-        ref={inputRef}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          if (!e.target.value) setShowDropdown(false);
-        }}
-        onKeyDown={handleKeyDownInternal}
-        onFocus={() => {
-          if (suggestions.length > 0) setShowDropdown(true);
-        }}
-        disabled={disabled}
-        className="flex-1 pr-8"
-      />
+    <div className="w-full space-y-2.5 flex-1">
+      <div className="bg-muted/30 p-2 rounded-lg border border-border/70 space-y-2">
+        <CategorySelector
+          selected={categoryFilter}
+          onChange={setSelectedCategories}
+        />
 
-      {/* Loading spinner */}
-      {isLoading && (
-        <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <div className="flex items-center justify-between pt-1.5 border-t border-border/40">
+          <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={onlyFeatured}
+              onChange={(e) => setOnlyFeatured(e.target.checked)}
+              className="rounded border-input text-primary focus:ring-ring h-3.5 w-3.5 accent-primary"
+            />
+            <span className="flex items-center gap-1">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              Solo destacados
+            </span>
+          </label>
         </div>
-      )}
+      </div>
 
-      {/* Suggestions dropdown */}
-      {showDropdown && suggestions.length > 0 && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-y-auto"
-        >
-          {suggestions.map((item, index) => (
-            <button
-              key={`${item.type}-${index}`}
-              className={`w-full flex items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent ${
-                index === selectedIndex ? "bg-accent" : ""
-              }`}
-              onClick={() => handleSelect(item)}
-              onMouseEnter={() => setSelectedIndex(index)}
-            >
-              {/* Category icon or map pin */}
-              <span className="mt-0.5 shrink-0 text-base leading-none">
-                {item.type === "nominatim"
-                  ? "📍"
-                  : item.venue
-                    ? VENUE_CATEGORY_ICONS[item.venue.category]
-                    : "📍"}
+      <div className="relative w-full">
+        <Input
+          ref={inputRef}
+          placeholder={placeholderText}
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            if (!e.target.value) setShowDropdown(false);
+          }}
+          onKeyDown={handleKeyDownInternal}
+          onFocus={() => {
+            if (suggestions.length > 0) setShowDropdown(true);
+          }}
+          disabled={disabled}
+          className="w-full pr-8"
+        />
+
+        {isLoading && (
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {showDropdown && suggestions.length > 0 && (
+          <div
+            ref={dropdownRef}
+            className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-y-auto flex flex-col"
+          >
+            <div className="px-3 py-1.5 bg-muted/50 border-b border-border flex flex-wrap gap-1 items-center">
+              <span className="text-[10px] font-medium text-muted-foreground mr-1">
+                Filtros activos:
               </span>
-
-              <div className="min-w-0 flex-1">
-                <span className="block truncate text-foreground font-medium">
-                  {item.type === "nominatim" && item.suggestion
-                    ? item.suggestion.displayName.split(",")[0]
-                    : item.displayName}
+              {onlyFeatured && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded-md font-semibold shadow-sm">
+                  ★ Destacados
                 </span>
-                <span className="block text-xs text-muted-foreground truncate mt-0.5">
-                  {item.type === "nominatim" && item.suggestion
-                    ? item.suggestion.displayName
-                    : item.venue
-                      ? `${item.venue.address} · ${VENUE_CATEGORY_LABELS[item.venue.category]}${item.venue.isFeatured ? " · ⭐ Destacado" : ""}`
-                      : ""}
+              )}
+              {categoryFilter.length < 3 ? (
+                categoryFilter.map((c) => (
+                  <span
+                    key={c}
+                    className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-medium"
+                  >
+                    {VENUE_CATEGORY_LABELS[c]}
+                  </span>
+                ))
+              ) : (
+                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md">
+                  Todas las categorías
                 </span>
-              </div>
+              )}
+            </div>
 
-              {/* Source badge */}
-              <span className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5 mt-0.5">
-                {getSourceIcon(item.type)}
-                {getSourceLabel(item.type)}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+            <div className="overflow-y-auto flex-1">
+              {suggestions.map((item, index) => (
+                <button
+                  key={`${item.type}-${index}`}
+                  className={`w-full flex items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent ${
+                    index === selectedIndex ? "bg-accent" : ""
+                  }`}
+                  onClick={() => handleSelect(item)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                >
+                  <span className="mt-0.5 shrink-0 text-base leading-none">
+                    {item.type === "nominatim"
+                      ? "📍"
+                      : item.venue
+                        ? VENUE_CATEGORY_ICONS[item.venue.category]
+                        : "📍"}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-foreground font-medium">
+                      {item.type === "nominatim" && item.suggestion
+                        ? item.suggestion.displayName.split(",")[0]
+                        : item.displayName}
+                    </span>
+                    <span className="block text-xs text-muted-foreground truncate mt-0.5">
+                      {item.type === "nominatim" && item.suggestion
+                        ? item.suggestion.displayName
+                        : item.venue
+                          ? `${item.venue.address} · ${VENUE_CATEGORY_LABELS[item.venue.category]}${item.venue.isFeatured ? " · ⭐ Destacado" : ""}`
+                          : ""}
+                    </span>
+                  </div>
+
+                  <span className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5 mt-0.5">
+                    {getSourceIcon(item.type)}
+                    {getSourceLabel(item.type)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
