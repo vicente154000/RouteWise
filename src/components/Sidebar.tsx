@@ -21,7 +21,7 @@ import {
 import VenueAutocomplete from "./VenueAutocomplete";
 import VenueList from "./VenueList";
 import VenueDetailModal from "./VenueDetailModal";
-import type { Venue, Coordinate } from "@/core/domain/venue";
+import type { Venue, Coordinate, VenueCategory } from "@/core/domain/venue"; // <-- Añadido VenueCategory
 import type { Suggestion } from "@/core/infrastructure/geocoding";
 import { routeOptimizationService } from "@/core/infrastructure/dependencies";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -58,6 +58,12 @@ export default function Sidebar({
     "08:00",
   );
 
+  // <-- NUEVOS ESTADOS: Control de filtros en el estado del Sidebar (no localStorage)
+  const [selectedCategories, setSelectedCategories] = useState<VenueCategory[]>(
+    ["restaurant", "bar", "nightclub"],
+  );
+  const [onlyFeatured, setOnlyFeatured] = useState<boolean>(false);
+
   // Venue detail modal state
   const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
   const [detailIndex, setDetailIndex] = useState(0);
@@ -77,7 +83,6 @@ export default function Sidebar({
   }, []);
 
   const handleSelectSuggestion = (suggestion: Suggestion | Venue) => {
-    // If a Venue is passed (from VenueAutocomplete), add it directly
     if ((suggestion as Venue).id && (suggestion as Venue).name) {
       setStops((prev) => [...prev, suggestion as Venue]);
     } else {
@@ -87,7 +92,7 @@ export default function Sidebar({
         name: s.displayName.split(",")[0].trim(),
         address: s.displayName,
         coordinates: s.coordinates,
-        category: "restaurant",
+        category: selectedCategories[0] || "restaurant", // Usa una seleccionada por defecto si aplica
         isFeatured: false,
       };
 
@@ -152,7 +157,6 @@ export default function Sidebar({
         setRoadDistance(result.totalDistance ?? null);
         setRoadDuration(result.totalDuration ?? null);
       } else {
-        // Fallback: use straight-line order
         const coords = stops.map((s) => s.coordinates);
         setOptimizedRoute(stops);
         setRouteGeometry(coords);
@@ -203,8 +207,6 @@ export default function Sidebar({
   const handleShareRoute = async () => {
     const routeToShare = isOptimized ? optimizedRoute : stops;
 
-    // Encode venue data as a compact JSON array in the URL
-    // Each venue: [name, address, lat, lng, category, isFeatured?]
     const venueData = routeToShare.map((v) => [
       v.name,
       v.address,
@@ -282,21 +284,24 @@ export default function Sidebar({
           className="w-full cursor-pointer font-mono text-center text-sm tracking-wide h-9 bg-background focus-visible:ring-1"
         />
       </div>
-      {/* Add stop form with autocomplete */}
+
+      {/* Formulario de búsqueda con Autocomplete unificado */}
       <div className="p-4 space-y-2">
-        <div className="flex gap-2">
+        <div className="flex items-end gap-2">
           <VenueAutocomplete
             value={address}
             onChange={setAddress}
             onSelect={handleSelectSuggestion}
             onKeyDown={handleKeyDown}
-            categoryFilter={["restaurant", "bar", "nightclub"]}
-            placeholder="Busca restaurante, bar o discoteca"
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
+            onlyFeatured={onlyFeatured}
+            setOnlyFeatured={setOnlyFeatured}
           />
           <Button
             size="icon"
             disabled={isOptimizing}
-            className="opacity-50"
+            className="opacity-50 shrink-0 mb-[1px]"
             title="Selecciona una dirección de las sugerencias"
           >
             <Plus className="h-4 w-4" />
@@ -310,23 +315,20 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Venue list or onboarding */}
+      {/* Lista de paradas u Onboarding */}
       <div className="flex-1 px-4 pb-2 min-h-0 overflow-hidden">
         {stops.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-6">
-            {/* Step 1 */}
             <div className="space-y-2">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <span className="text-primary font-bold text-lg">1</span>
               </div>
               <h3 className="font-semibold text-foreground">Busca lugares</h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
-                Escribe el nombre de un restaurante, bar, museo o direccion en
-                Madrid
+                Escribe el nombre de un restaurante, bar, discoteca o dirección.
               </p>
             </div>
 
-            {/* Arrow */}
             <div className="text-muted-foreground/40">
               <svg
                 className="w-6 h-6"
@@ -343,19 +345,17 @@ export default function Sidebar({
               </svg>
             </div>
 
-            {/* Step 2 */}
             <div className="space-y-2">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <span className="text-primary font-bold text-lg">2</span>
               </div>
-              <h3 className="font-semibold text-foreground">Anade paradas</h3>
+              <h3 className="font-semibold text-foreground">Añade paradas</h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
-                Tambien puedes hacer clic directamente en el mapa para anadir
-                una parada
+                También puedes hacer clic directamente en el mapa para añadir
+                una parada.
               </p>
             </div>
 
-            {/* Arrow */}
             <div className="text-muted-foreground/40">
               <svg
                 className="w-6 h-6"
@@ -372,7 +372,6 @@ export default function Sidebar({
               </svg>
             </div>
 
-            {/* Step 3 */}
             <div className="space-y-2">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <span className="text-primary font-bold text-lg">3</span>
@@ -382,7 +381,7 @@ export default function Sidebar({
               </h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
                 Con al menos 2 paradas, pulsa Optimizar ruta para calcular el
-                mejor recorrido
+                mejor recorrido.
               </p>
             </div>
           </div>
@@ -399,7 +398,7 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Metrics */}
+      {/* Métricas */}
       {stops.length > 0 && (
         <div className="px-4 pb-2">
           <Card className="bg-muted/50">
@@ -440,7 +439,7 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Botones de acción */}
       <div className="p-4 pt-2 space-y-2">
         <Button
           className="w-full gap-2"
@@ -488,7 +487,6 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Venue detail modal */}
       <VenueDetailModal
         venue={detailVenue}
         index={detailIndex}
