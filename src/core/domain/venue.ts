@@ -34,17 +34,3 @@ export interface Venue {
   isFeatured?: boolean;
   timeWindow?: TimeWindow;
 }
-
-export interface UserPreferences {
-  categories: VenueCategory[];
-  startTime: string;
-}
-
-export interface Itinerary {
-  id: string;
-  venues: Venue[];
-  totalDistance: number;
-  totalDuration: number;
-  geometry: Coordinate[];
-  createdAt: string;
-}
