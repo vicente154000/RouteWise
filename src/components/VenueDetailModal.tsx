@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { X, MapPin, Star, Clock, Timer, Navigation, ExternalLink } from "lucide-react";
+import {
+  X,
+  MapPin,
+  Star,
+  Clock,
+  Timer,
+  Navigation,
+  ExternalLink,
+} from "lucide-react";
 import type { Venue } from "@/core/domain/venue";
 import {
   VENUE_CATEGORY_ICONS,
@@ -173,7 +181,9 @@ export default function VenueDetailModal({
               variant="outline"
               size="sm"
               className="flex-1 gap-1.5 text-xs"
-              onClick={() => window.open(googleMapsUrl, "_blank", "noopener,noreferrer")}
+              onClick={() =>
+                window.open(googleMapsUrl, "_blank", "noopener,noreferrer")
+              }
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Google Maps
@@ -182,7 +192,9 @@ export default function VenueDetailModal({
               variant="outline"
               size="sm"
               className="flex-1 gap-1.5 text-xs"
-              onClick={() => window.open(osmUrl, "_blank", "noopener,noreferrer")}
+              onClick={() =>
+                window.open(osmUrl, "_blank", "noopener,noreferrer")
+              }
             >
               <ExternalLink className="h-3.5 w-3.5" />
               OpenStreetMap
