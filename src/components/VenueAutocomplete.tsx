@@ -16,6 +16,11 @@ import {
 } from "@/core/domain/venue";
 import CategorySelector from "./CategorySelector";
 
+const SEARCH_DEBOUNCE_MS = 300;
+const MIN_LOCAL_RESULTS_THRESHOLD = 5;
+const MAX_SUGGESTIONS_DISPLAYED = 8;
+const MIN_NOMINATIM_CHAR_LENGTH = 3;
+
 interface VenueSuggestion {
   type: "local" | "overpass" | "nominatim";
   venue?: Venue;
@@ -127,7 +132,7 @@ export default function VenueAutocomplete({
         });
 
         // 2. Overpass search (slower, but more comprehensive)
-        if (results.length < 5) {
+        if (results.length < MIN_LOCAL_RESULTS_THRESHOLD) {
           const overpassVenues = await searchOverpassVenues(trimmed);
           overpassVenues.forEach((v) => {
             const isDuplicate = results.some(
@@ -147,7 +152,11 @@ export default function VenueAutocomplete({
         }
 
         // 3. Nominatim search (fallback for geocoding, no category/featured filtering possible)
-        if (results.length === 0 && trimmed.length >= 3 && !onlyFeatured) {
+        if (
+          results.length === 0 &&
+          trimmed.length >= MIN_NOMINATIM_CHAR_LENGTH &&
+          !onlyFeatured
+        ) {
           const nominatimResults = await searchSuggestions(trimmed);
           nominatimResults.forEach((s) => {
             results.push({
@@ -160,12 +169,12 @@ export default function VenueAutocomplete({
       } catch {
         // Will fail silently and just show whatever results were found (if any)
       } finally {
-        setSuggestions(results.slice(0, 8));
+        setSuggestions(results.slice(0, MAX_SUGGESTIONS_DISPLAYED));
         setShowDropdown(results.length > 0);
         setSelectedIndex(-1);
         setIsLoading(false);
       }
-    }, 300);
+    }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
