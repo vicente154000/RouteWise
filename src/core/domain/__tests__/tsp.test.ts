@@ -9,15 +9,15 @@ import {
   computeArrivalTimes,
   type RouteSegment,
 } from "../tsp";
-import type { Venue } from "../venue"; // Asegúrate de importar RouteSegment de donde corresponda si cambia, o de su propio archivo
+import type { Venue } from "../venue";
 
 describe("TSP Domain Logic", () => {
-  // Coordenadas reales aproximadas en Pamplona
+  // Realistic coordinates in Pamplona for testing distance calculations
   const coordA = { lat: 42.8125, lng: -1.645 }; // Plaza del Castillo
   const coordB = { lat: 42.816, lng: -1.643 }; // Catedral de Pamplona (~0.42 km)
   const coordC = { lat: 42.809, lng: -1.65 }; // Vuelta del Castillo (~0.55 km)
 
-  // Venues ficticios usando las propiedades e interfaces reales de tu dominio
+  // Mock venues with realistic coordinates and categories for testing route optimization
   const mockVenues: Venue[] = [
     {
       id: "1",
@@ -61,12 +61,12 @@ describe("TSP Domain Logic", () => {
   });
 
   it("nearestNeighbor organiza y prioriza los elementos basándose en la cercanía ponderada", () => {
-    // Forzamos un array desordenado para evaluar que el algoritmo procesa la cercanía
+    // We shuffle the input order to ensure the algorithm is actually sorting based on distance, not just returning the input order
     const mixedStops = [mockVenues[0], mockVenues[2], mockVenues[1]];
     const result = nearestNeighbor(mixedStops);
 
     expect(result).toHaveLength(3);
-    expect(result[0].id).toBe("1"); // El punto de partida de la heurística se respeta invariable
+    expect(result[0].id).toBe("1");
   });
 
   it("twoOpt refina y busca mejoras locales invirtiendo segmentos de ruta", () => {
@@ -85,41 +85,38 @@ describe("TSP Domain Logic", () => {
   });
 
   it("computeArrivalTimes inyecta correctamente las horas estimadas de llegada (estimatedArrival)", () => {
-    // Simulamos un segmento de viaje de 10 minutos (600 segundos) entre el punto 1 y el 2
+    // Simulate segments with realistic durations (10 minutes = 600 seconds) between the venues
     const mockSegments: RouteSegment[] = [
       { distance: 0.42, duration: 600, geometry: [coordA, coordB] },
     ];
 
-    // Llamamos a la función con hora de inicio a las 08:30
+    // Cast venues to include timeWindow for testing purposes
     const routeWithTimes = computeArrivalTimes(
       [mockVenues[0], mockVenues[1]],
       mockSegments,
       "08:30",
     );
 
-    // Primer elemento: llega directo a la hora de salida
+    // First stop: arrival time should be the start time (08:30)
     expect(routeWithTimes[0].timeWindow?.estimatedArrival).toBe("08:30");
 
-    // Segundo elemento: llega tras los 10 min de trayecto + 10 min obligatorios de estancia en el primer stop
-    // 08:30 + 10m estancia + 10m trayecto = 08:50
+    // Second stop: arrival time should be start time + 10 min travel + 10 min stay = 08:50
     expect(routeWithTimes[1].timeWindow?.estimatedArrival).toBe("08:50");
   });
   it("computeArrivalTimes calcula solo duración acumulada relativa si startTime está vacío", () => {
-    const mockSegments = [
-      { distance: 0.5, duration: 300, geometry: [] }, // 5 minutos de trayecto
-    ];
+    const mockSegments = [{ distance: 0.5, duration: 300, geometry: [] }];
 
-    // Pasamos un string vacío como startTime
+    // empty arral of venues with timeWindow for testing purposes
     const route = computeArrivalTimes(
       [mockVenues[0], mockVenues[1]],
       mockSegments,
       "",
     );
 
-    // Parada inicial: sin tiempo acumulado
+    // Initial stop should have +0 min since it's the starting point
     expect(route[0].timeWindow?.estimatedArrival).toBe("+0 min");
 
-    // Parada 2: 0 min + 10 min de estancia en Parada 1 + 5 min de viaje = +15 min
+    // Second stop should have +5 min (duration of the segment) since we are only calculating relative durations
     expect(route[1].timeWindow?.estimatedArrival).toBe("+15 min");
   });
 });

@@ -111,7 +111,7 @@ export default function VenueAutocomplete({
       const results: VenueSuggestion[] = [];
 
       try {
-        // 1. Capa Local
+        // 1. Local venues search (fast, in-memory)
         const localVenues = searchLocalVenues(trimmed);
         localVenues.forEach((v: Venue) => {
           const matchesCategory = categoryFilter.includes(v.category);
@@ -126,7 +126,7 @@ export default function VenueAutocomplete({
           }
         });
 
-        // 2. Capa Overpass (OSM)
+        // 2. Overpass search (slower, but more comprehensive)
         if (results.length < 5) {
           const overpassVenues = await searchOverpassVenues(trimmed);
           overpassVenues.forEach((v) => {
@@ -146,7 +146,7 @@ export default function VenueAutocomplete({
           });
         }
 
-        // 3. Capa Nominatim
+        // 3. Nominatim search (fallback for geocoding, no category/featured filtering possible)
         if (results.length === 0 && trimmed.length >= 3 && !onlyFeatured) {
           const nominatimResults = await searchSuggestions(trimmed);
           nominatimResults.forEach((s) => {
@@ -158,7 +158,7 @@ export default function VenueAutocomplete({
           });
         }
       } catch {
-        // Fallará silenciosamente dejando el arreglo vacío de forma segura
+        // Will fail silently and just show whatever results were found (if any)
       } finally {
         setSuggestions(results.slice(0, 8));
         setShowDropdown(results.length > 0);

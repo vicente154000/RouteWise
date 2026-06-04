@@ -58,7 +58,7 @@ export default function Sidebar({
     "08:00",
   );
 
-  // <-- NUEVOS ESTADOS: Control de filtros en el estado del Sidebar (no localStorage)
+  // <-- NEW STATE FOR CATEGORY FILTER AND FEATURED TOGGLE -->
   const [selectedCategories, setSelectedCategories] = useState<VenueCategory[]>(
     ["restaurant", "bar", "nightclub"],
   );
@@ -92,7 +92,7 @@ export default function Sidebar({
         name: s.displayName.split(",")[0].trim(),
         address: s.displayName,
         coordinates: s.coordinates,
-        category: selectedCategories[0] || "restaurant", // Usa una seleccionada por defecto si aplica
+        category: selectedCategories[0] || "restaurant", // Use the first selected category as default for new venues added via search
         isFeatured: false,
       };
 
@@ -276,7 +276,7 @@ export default function Sidebar({
         />
       </div>
 
-      {/* Formulario de búsqueda con Autocomplete unificado */}
+      {/* Search Form with Unified Autocomplete */}
       <div className="p-4 space-y-2">
         <div className="flex items-end gap-2">
           <VenueAutocomplete
@@ -306,7 +306,7 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Lista de paradas u Onboarding */}
+      {/* Stops List or Onboarding */}
       <div className="flex-1 px-4 pb-2 min-h-0 overflow-hidden">
         {stops.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-6">
@@ -404,7 +404,7 @@ export default function Sidebar({
         />
       </div>
 
-      {/* Botones de acción */}
+      {/* Action Buttons */}
       <div className="p-4 pt-2 space-y-2">
         <Button
           className="w-full gap-2"
