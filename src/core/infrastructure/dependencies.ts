@@ -8,7 +8,7 @@ import RouteOptimizationService from "../application/services/RouteOptimizationS
 
 /**
  * OSRMRoutingAdapter: adapter that implements `IRoutingService` using
- * the concrete functions from `src/lib/routing.ts`.
+ * the concrete functions from `src/core/infrastructure/routing.ts`.
  */
 class OSRMRoutingAdapter implements IRoutingService {
   async getRoute(from: Coordinate, to: Coordinate) {
@@ -18,8 +18,6 @@ class OSRMRoutingAdapter implements IRoutingService {
   async getFullRoute(stops: Coordinate[]) {
     return routing.getFullRoute(stops);
   }
-
-  // getRouteForVenues and getDistanceMatrix are optional and not required here.
 }
 
 // Infrastructure adapters (singletons)
@@ -36,11 +34,3 @@ export const venueSearchService = new VenueSearchService(
 export const routeOptimizationService = new RouteOptimizationService(
   osrmRoutingAdapter,
 );
-
-export default {
-  localVenueRepository,
-  overpassVenueRepository,
-  osrmRoutingAdapter,
-  venueSearchService,
-  routeOptimizationService,
-};

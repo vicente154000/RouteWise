@@ -1,4 +1,4 @@
-import type { Coordinate, Venue } from "../../domain/venue";
+import type { Coordinate } from "../../domain/venue";
 import type { RouteSegment, RouteResult } from "../../domain/tsp";
 
 /**
@@ -18,16 +18,4 @@ export interface IRoutingService {
    * Returns `null` if no road route could be obtained.
    */
   getFullRoute(stops: Coordinate[]): Promise<RouteResult | null>;
-
-  /**
-   * Convenience: compute a route directly from Venue entities.
-   * Optional — implementations may delegate to `getFullRoute`.
-   */
-  getRouteForVenues?(venues: Venue[]): Promise<RouteResult | null>;
-
-  /**
-   * Optional: compute a distance matrix (straight-line or road distances)
-   * between the provided coordinates. Returns `null` if not supported.
-   */
-  getDistanceMatrix?(coords: Coordinate[]): Promise<number[][] | null>;
 }

@@ -18,9 +18,8 @@ export class OverpassVenueRepository implements IVenueRepository {
   }
 
   async getById(_id: string): Promise<Venue | null> {
-    void _id;
     // Overpass does not provide a convenient global ID lookup in this repo abstraction.
-    // Could be implemented by querying Overpass with the element id if needed.
+    void _id;
     return null;
   }
 }

@@ -1,4 +1,5 @@
 import type { RouteResult, RouteSegment } from "../domain/tsp";
+import { haversineDistance } from "../domain/tsp";
 import type { Coordinate } from "../domain/venue";
 
 /**
@@ -162,20 +163,4 @@ export async function getFullRoute(
     totalDuration,
     fullGeometry,
   };
-}
-
-function haversineDistance(a: Coordinate, b: Coordinate): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const sinDLat = Math.sin(dLat / 2);
-  const sinDLng = Math.sin(dLng / 2);
-  const aVal =
-    sinDLat * sinDLat +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      sinDLng *
-      sinDLng;
-  const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
-  return R * c;
 }
