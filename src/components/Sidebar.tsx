@@ -62,12 +62,15 @@ export default function Sidebar({
   const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
   const [detailIndex, setDetailIndex] = useState(0);
 
-  const handleShowDetail = useCallback((venue: Venue) => {
-    const displayVenues = isOptimized ? optimizedRoute : stops;
-    const idx = displayVenues.findIndex((v) => v.id === venue.id);
-    setDetailVenue(venue);
-    setDetailIndex(idx >= 0 ? idx : 0);
-  }, [isOptimized, optimizedRoute, stops]);
+  const handleShowDetail = useCallback(
+    (venue: Venue) => {
+      const displayVenues = isOptimized ? optimizedRoute : stops;
+      const idx = displayVenues.findIndex((v) => v.id === venue.id);
+      setDetailVenue(venue);
+      setDetailIndex(idx >= 0 ? idx : 0);
+    },
+    [isOptimized, optimizedRoute, stops],
+  );
 
   const handleCloseDetail = useCallback(() => {
     setDetailVenue(null);
