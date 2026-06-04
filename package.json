@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css,md}\"",
     "prepare": "husky"
   },
   "dependencies": {
@@ -40,15 +41,19 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "postcss": "^8",
+    "prettier": "^3.8.3",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
     "vitest": "^4.1.8"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
+      "prettier --write",
       "eslint --fix",
       "bash -c 'tsc --noEmit'"
     ],
-    "*.{json,md,css}": []
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }
