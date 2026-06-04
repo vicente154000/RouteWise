@@ -19,6 +19,7 @@ interface VenueCardProps {
   isOptimized: boolean;
   onRemove: (id: string) => void;
   onUpdateDeadline: (id: string, deadline: string) => void;
+  onShowDetail?: (venue: Venue) => void;
 }
 
 /**
@@ -35,6 +36,7 @@ export default function VenueCard({
   isOptimized,
   onRemove,
   onUpdateDeadline,
+  onShowDetail,
 }: VenueCardProps) {
   const categoryColor = VENUE_CATEGORY_COLORS[venue.category];
   const categoryIcon = VENUE_CATEGORY_ICONS[venue.category];
@@ -46,7 +48,7 @@ export default function VenueCard({
 
   return (
     <div
-      className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 hover:bg-accent/50 transition-all duration-300"
+      className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 transition-all duration-300"
       style={{ borderLeftColor: categoryColor, borderLeftWidth: 3 }}
     >
       {/* Main row */}
@@ -63,8 +65,13 @@ export default function VenueCard({
           {index + 1}
         </span>
 
-        {/* Venue info */}
-        <div className="min-w-0 flex-1">
+        {/* Venue info — clickable to open detail modal */}
+        <button
+          className="min-w-0 flex-1 text-left rounded-md px-1 -ml-1 py-0.5 hover:bg-accent/50 transition-colors duration-200 cursor-pointer"
+          onClick={() => onShowDetail?.(venue)}
+          type="button"
+          title="Ver detalle"
+        >
           <div className="flex items-center gap-1.5">
             <span className="text-sm" title={categoryLabel}>
               {categoryIcon}
@@ -86,7 +93,7 @@ export default function VenueCard({
             <MapPin className="h-3 w-3 shrink-0" />
             {venue.address}
           </p>
-        </div>
+        </button>
 
         {/* Remove button (only when not optimized) */}
         {!isOptimized && (

@@ -15,6 +15,7 @@ interface VenueListProps {
   onUpdateDeadline: (id: string, deadline: string) => void;
   isOptimized: boolean;
   isOptimizing?: boolean;
+  onShowDetail?: (venue: Venue) => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export default function VenueList({
   onUpdateDeadline,
   isOptimized,
   isOptimizing = false,
+  onShowDetail,
 }: VenueListProps) {
   const displayVenues = isOptimized ? optimizedRoute : venues;
 
@@ -89,6 +91,7 @@ export default function VenueList({
                   isOptimized={isOptimized}
                   onRemove={onRemove}
                   onUpdateDeadline={onUpdateDeadline}
+                  onShowDetail={onShowDetail}
                 />
               );
             })

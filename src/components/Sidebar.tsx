@@ -1,6 +1,6 @@
 "use client";
 import { Input } from "./ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
   Plus,
   Route,
   Copy,
+  Share2,
   Loader2,
   Navigation,
   Trash2,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import VenueAutocomplete from "./VenueAutocomplete";
 import VenueList from "./VenueList";
+import VenueDetailModal from "./VenueDetailModal";
 import type { Venue, Coordinate } from "@/core/domain/venue";
 import type { Suggestion } from "@/core/infrastructure/geocoding";
 import { routeOptimizationService } from "@/core/infrastructure/dependencies";
@@ -55,6 +57,21 @@ export default function Sidebar({
     "routewise-start-time",
     "08:00",
   );
+
+  // Venue detail modal state
+  const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
+  const [detailIndex, setDetailIndex] = useState(0);
+
+  const handleShowDetail = useCallback((venue: Venue) => {
+    const displayVenues = isOptimized ? optimizedRoute : stops;
+    const idx = displayVenues.findIndex((v) => v.id === venue.id);
+    setDetailVenue(venue);
+    setDetailIndex(idx >= 0 ? idx : 0);
+  }, [isOptimized, optimizedRoute, stops]);
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailVenue(null);
+  }, []);
 
   const handleSelectSuggestion = (suggestion: Suggestion | Venue) => {
     // If a Venue is passed (from VenueAutocomplete), add it directly
@@ -178,6 +195,26 @@ export default function Sidebar({
 
     await navigator.clipboard.writeText(text);
     toast.success("Ruta copiada al portapapeles");
+  };
+
+  const handleShareRoute = async () => {
+    const routeToShare = isOptimized ? optimizedRoute : stops;
+
+    // Encode venue data as a compact JSON array in the URL
+    // Each venue: [name, address, lat, lng, category, isFeatured?]
+    const venueData = routeToShare.map((v) => [
+      v.name,
+      v.address,
+      v.coordinates.lat.toFixed(6),
+      v.coordinates.lng.toFixed(6),
+      v.category,
+      v.isFeatured ? 1 : 0,
+    ]);
+    const encoded = encodeURIComponent(JSON.stringify(venueData));
+    const url = `${window.location.origin}${window.location.pathname}?venues=${encoded}`;
+
+    await navigator.clipboard.writeText(url);
+    toast.success("URL del itinerario copiada al portapapeles");
   };
 
   const handleToggleTheme = () => {
@@ -354,6 +391,7 @@ export default function Sidebar({
             onUpdateDeadline={handleUpdateDeadline}
             isOptimized={isOptimized}
             isOptimizing={isOptimizing}
+            onShowDetail={handleShowDetail}
           />
         )}
       </div>
@@ -427,6 +465,16 @@ export default function Sidebar({
 
           <Button
             variant="outline"
+            className="flex-1 gap-2"
+            onClick={handleShareRoute}
+            disabled={stops.length === 0 || isOptimizing}
+          >
+            <Share2 className="h-4 w-4" />
+            Compartir
+          </Button>
+
+          <Button
+            variant="outline"
             size="icon"
             onClick={handleClearAll}
             disabled={stops.length === 0 || isOptimizing}
@@ -436,6 +484,15 @@ export default function Sidebar({
           </Button>
         </div>
       </div>
+
+      {/* Venue detail modal */}
+      <VenueDetailModal
+        venue={detailVenue}
+        index={detailIndex}
+        total={isOptimized ? optimizedRoute.length : stops.length}
+        isOpen={detailVenue !== null}
+        onClose={handleCloseDetail}
+      />
     </div>
   );
 }

@@ -1,0 +1,20 @@
+# ============================================================
+# Dockerfile.dev — RouteWise (Next.js 14) Development
+# ============================================================
+# Single-stage image for development with hot reload.
+# Source code is mounted as a volume, so no need to rebuild.
+# ============================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies (all, including devDependencies)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Expose port
+EXPOSE 3000
+
+# Start Next.js in development mode
+CMD ["npm", "run", "dev"]
