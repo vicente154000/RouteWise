@@ -32,7 +32,12 @@ export class RouteOptimizationService {
 
     const optimized = optimizeRoute(venues);
     const coords = optimized.map((v) => v.coordinates);
-    const routeResult = await this.routing.getFullRoute(coords);
+    let routeResult;
+    try {
+      routeResult = await this.routing.getFullRoute(coords);
+    } catch {
+      routeResult = null;
+    }
 
     if (routeResult) {
       const withTimes = computeArrivalTimes(
