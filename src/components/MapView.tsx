@@ -21,14 +21,13 @@ interface MapViewProps {
 
 // Fix Leaflet default icon issue (webpack)
 function fixLeafletIcon() {
-  delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+  delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)
+    ._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl:
-      "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl:
-      "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   });
 }
 
@@ -188,12 +187,9 @@ function MapView({
 
     // Add markers
     const markers = routeToShow.map((venue, index) => {
-      const marker = L.marker(
-        [venue.coordinates.lat, venue.coordinates.lng],
-        {
-          icon: createCategoryIcon(venue.category, !!venue.isFeatured, index),
-        },
-      ).addTo(map);
+      const marker = L.marker([venue.coordinates.lat, venue.coordinates.lng], {
+        icon: createCategoryIcon(venue.category, !!venue.isFeatured, index),
+      }).addTo(map);
 
       const popupContent = `
         <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; max-width: 220px;">
