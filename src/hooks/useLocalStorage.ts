@@ -40,10 +40,7 @@ function ensureSchemaVersion(): void {
       MANAGED_KEYS.forEach((key) => {
         window.localStorage.removeItem(key);
       });
-      window.localStorage.setItem(
-        SCHEMA_VERSION_KEY,
-        String(SCHEMA_VERSION)
-      );
+      window.localStorage.setItem(SCHEMA_VERSION_KEY, String(SCHEMA_VERSION));
     }
   } catch {
     // localStorage not available (SSR), ignore
@@ -80,7 +77,7 @@ function writeToStorage(key: string, value: unknown): void {
 export function useLocalStorage<T>(
   key: string,
   initialValue: T,
-  debounceMs: number = DEFAULT_DEBOUNCE_MS
+  debounceMs: number = DEFAULT_DEBOUNCE_MS,
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
 
@@ -136,7 +133,7 @@ export function useLocalStorage<T>(
         return newValue;
       });
     },
-    [key, debounceMs]
+    [key, debounceMs],
   );
 
   return [storedValue, setValue];
