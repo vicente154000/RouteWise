@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Venue, VenueCategory } from "@/core/domain/venue";
-import { VENUE_CATEGORY_LABELS, VENUE_CATEGORY_ICONS } from "@/core/domain/venue";
+import {
+  VENUE_CATEGORY_LABELS,
+  VENUE_CATEGORY_ICONS,
+} from "@/core/domain/venue";
 
 interface ItinerarySummaryProps {
   venues: Venue[];
@@ -16,13 +19,12 @@ const CATEGORY_DURATION_MINUTES: Record<VenueCategory, number> = {
 
 const DEFAULT_CATEGORY_DURATION_MINUTES = 60;
 
-const formatDistance = (meters: number | null) => {
-  if (meters === null) {
+const formatDistance = (distance: number | null) => {
+  if (distance === null) {
     return "-";
   }
 
-  const kilometers = meters / 1000;
-  return `${kilometers.toFixed(1)} km`;
+  return `${distance.toFixed(1)} km`;
 };
 
 const formatDuration = (seconds: number | null) => {
