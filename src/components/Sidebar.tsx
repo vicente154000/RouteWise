@@ -57,6 +57,9 @@ export default function Sidebar({
   const [error, setError] = useState<string | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [roadDuration, setRoadDuration] = useState<number | null>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [itineraryName, setItineraryName] = useState("");
   const [startTime, setStartTime] = useLocalStorage<string>(
     "routewise-start-time",
     "08:00",
@@ -79,15 +82,19 @@ export default function Sidebar({
       toast.error("Añade paradas antes de guardar un itinerario.");
       return;
     }
+    // En lugar de usar prompt(), abrimos nuestra propia cajita de texto
+    setIsSaving(true);
+  };
 
-    const name = window.prompt("Nombre del itinerario");
-    if (!name?.trim()) {
+  const confirmSaveItinerary = () => {
+    if (!itineraryName.trim()) {
+      toast.error("El nombre no puede estar vacío");
       return;
     }
 
     const itinerary: SavedItinerary = {
       id: crypto.randomUUID(),
-      name: name.trim(),
+      name: itineraryName.trim(),
       venues: stops,
       optimizedRoute,
       geometry: routeGeometry,
@@ -96,6 +103,10 @@ export default function Sidebar({
 
     saveItinerary(itinerary);
     toast.success("Itinerario guardado");
+
+    // Limpiamos y cerramos
+    setItineraryName("");
+    setIsSaving(false);
   };
 
   const handleLoadItinerary = (itinerary: SavedItinerary) => {
@@ -467,14 +478,40 @@ export default function Sidebar({
             </p>
           </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSaveCurrentItinerary}
-            disabled={stops.length === 0 || isOptimizing}
-          >
-            Guardar itinerario
-          </Button>
+          {isSaving ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={itineraryName}
+                onChange={(e) => setItineraryName(e.target.value)}
+                placeholder="Nombre del itinerario..."
+                className="h-8 text-xs w-40"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && confirmSaveItinerary()}
+              />
+              <Button size="sm" onClick={confirmSaveItinerary}>
+                Guardar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setIsSaving(false);
+                  setItineraryName("");
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSaveCurrentItinerary}
+              disabled={stops.length === 0 || isOptimizing}
+            >
+              Guardar itinerario
+            </Button>
+          )}
         </div>
 
         {savedItineraries.length === 0 ? (
