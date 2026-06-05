@@ -10,8 +10,11 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "homepage": "https://vicente154000.github.io/RouteWise",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css,md}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d out"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -40,6 +43,7 @@
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
+    "gh-pages": "^6.3.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.7",

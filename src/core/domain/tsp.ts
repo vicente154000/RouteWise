@@ -205,10 +205,9 @@ export function computeArrivalTimes(
   }
 
   let cumulativeMinutes = 0;
-  const STOP_DURATION_SECONDS = 10 * 60; // 10 min por parada
+  const STOP_DURATION_SECONDS = 10 * 60;
 
   return route.map((stop, index) => {
-    // Sumar el tiempo de trayecto desde la parada anterior
     if (index > 0 && segments[index - 1]) {
       if (hasStartTime) {
         currentSeconds += segments[index - 1].duration;
@@ -223,14 +222,12 @@ export function computeArrivalTimes(
       const minutes = Math.floor((currentSeconds % 3600) / 60);
       displayArrival = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 
-      // Sumar la estancia fija en esta parada para la siguiente (excepto última)
       if (index < route.length - 1) {
         currentSeconds += STOP_DURATION_SECONDS;
       }
     } else {
       displayArrival = `+${cumulativeMinutes} min`;
 
-      // Sumar los 10 minutos de estancia acumulados para el siguiente destino
       if (index < route.length - 1) {
         cumulativeMinutes += 10;
       }

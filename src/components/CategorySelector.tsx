@@ -20,7 +20,7 @@ export default function CategorySelector({
   onChange,
 }: CategorySelectorProps) {
   const toggleCategory = (category: VenueCategory) => {
-    // Evita deseleccionar todas las categorías (regla de negocio original)
+    // Tries to prevent deselecting the last active category, ensuring at least one category is always selected
     if (selected.length === 1 && selected.includes(category)) return;
 
     if (selected.includes(category)) {
