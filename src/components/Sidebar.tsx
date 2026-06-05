@@ -1,7 +1,7 @@
 "use client";
 
 import { Input } from "./ui/input";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   Clock,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
 import VenueAutocomplete from "./VenueAutocomplete";
 import VenueList from "./VenueList";
@@ -79,6 +80,12 @@ export default function Sidebar({
   // Venue detail modal state
   const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
   const [detailIndex, setDetailIndex] = useState(0);
+  // Optimization progress tracking and cancellation
+  const [progress, setProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleSaveCurrentItinerary = () => {
     if (stops.length === 0) {
@@ -204,6 +211,16 @@ export default function Sidebar({
     );
   };
 
+  const handleCancelOptimization = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsOptimizing(false);
+      setProgress(null);
+      toast.info("Optimización cancelada");
+    }
+  };
+
   const handleOptimize = async () => {
     if (stops.length < 2) {
       toast.error("Añade al menos 2 paradas para optimizar la ruta.");
@@ -212,9 +229,18 @@ export default function Sidebar({
 
     setIsOptimizing(true);
     setError(null);
+    setProgress(null);
+
+    // Create a new AbortController for this optimization
+    abortControllerRef.current = new AbortController();
 
     try {
-      const result = await routeOptimizationService.optimize(stops, startTime);
+      const result = await routeOptimizationService.optimize(
+        stops,
+        startTime,
+        abortControllerRef.current.signal,
+        (prog) => setProgress(prog),
+      );
 
       if (result) {
         setOptimizedRoute(result.venues);
@@ -232,12 +258,19 @@ export default function Sidebar({
       setIsOptimized(true);
       toast.success("Ruta optimizada correctamente");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Error al optimizar la ruta";
-      setError(errorMessage);
-      toast.error(errorMessage);
+      // Check if it's an AbortError (user cancelled)
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Already shown via toast.info() in handleCancelOptimization
+      } else {
+        const errorMessage =
+          err instanceof Error ? err.message : "Error al optimizar la ruta";
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
     } finally {
       setIsOptimizing(false);
+      setProgress(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -301,7 +334,7 @@ export default function Sidebar({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-card border-r border-border">
+    <div className="h-full flex flex-col bg-card border-r border-border overflow-hidden">
       {/* Header */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between gap-2 mb-1">
@@ -350,274 +383,314 @@ export default function Sidebar({
         />
       </div>
 
-      {/* Formulario de búsqueda con Autocomplete unificado */}
-      <div className="p-4 space-y-2">
-        <div className="flex items-end gap-2">
-          <VenueAutocomplete
-            value={address}
-            onChange={setAddress}
-            onSelect={handleSelectSuggestion}
-            onKeyDown={handleKeyDown}
-            selectedCategories={selectedCategories}
-            setSelectedCategories={setSelectedCategories}
-            onlyFeatured={onlyFeatured}
-            setOnlyFeatured={setOnlyFeatured}
-          />
-          <Button
-            size="icon"
-            disabled={isOptimizing}
-            className={`opacity-50 shrink-0 ${INPUT_ALIGNMENT_OFFSET_CLASS}`}
-            title="Selecciona una dirección de las sugerencias"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+      {/* SCROLLABLE CONTENT SECTION */}
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        {/* Formulario de búsqueda con Autocomplete unificado */}
+        <div className="p-4 space-y-2 shrink-0">
+          <div className="flex items-end gap-2">
+            <VenueAutocomplete
+              value={address}
+              onChange={setAddress}
+              onSelect={handleSelectSuggestion}
+              onKeyDown={handleKeyDown}
+              selectedCategories={selectedCategories}
+              setSelectedCategories={setSelectedCategories}
+              onlyFeatured={onlyFeatured}
+              setOnlyFeatured={setOnlyFeatured}
+            />
+            <Button
+              size="icon"
+              disabled={isOptimizing}
+              className={`opacity-50 shrink-0 ${INPUT_ALIGNMENT_OFFSET_CLASS}`}
+              title="Selecciona una dirección de las sugerencias"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-500 bg-red-50 dark:bg-red-950/50 px-2 py-1 rounded">
+              {error}
+            </p>
+          )}
         </div>
 
-        {error && (
-          <p className="text-xs text-red-500 bg-red-50 dark:bg-red-950/50 px-2 py-1 rounded">
-            {error}
-          </p>
-        )}
-      </div>
-
-      {/* Lista de paradas u Onboarding */}
-      <div className="flex-1 px-4 pb-2 min-h-0 overflow-hidden">
-        {stops.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-6">
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <span className="text-primary font-bold text-lg">1</span>
-              </div>
-              <h3 className="font-semibold text-foreground">Busca lugares</h3>
-              <p className="text-sm text-muted-foreground max-w-[240px]">
-                Escribe el nombre de un restaurante, bar, discoteca o dirección.
-              </p>
-            </div>
-
-            <div className="text-muted-foreground/40">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <span className="text-primary font-bold text-lg">2</span>
-              </div>
-              <h3 className="font-semibold text-foreground">Añade paradas</h3>
-              <p className="text-sm text-muted-foreground max-w-[240px]">
-                También puedes hacer clic directamente en el mapa para añadir
-                una parada.
-              </p>
-            </div>
-
-            <div className="text-muted-foreground/40">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <span className="text-primary font-bold text-lg">3</span>
-              </div>
-              <h3 className="font-semibold text-foreground">
-                Optimiza tu ruta
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-[240px]">
-                Con al menos 2 paradas, pulsa Optimizar ruta para calcular el
-                mejor recorrido.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <VenueList
-            venues={stops}
-            optimizedRoute={optimizedRoute}
-            onRemove={handleRemoveStop}
-            onUpdateDeadline={handleUpdateDeadline}
-            isOptimized={isOptimized}
-            isOptimizing={isOptimizing}
-            onShowDetail={handleShowDetail}
-          />
-        )}
-      </div>
-
-      {/* Métricas */}
-      {stops.length > 0 && (
-        <div className="px-4 pb-2">
-          <Card className="bg-muted/50">
-            <CardContent className="p-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {isOptimized ? "Distancia por carretera" : "Distancia total"}
-                </span>
-                <span className="text-sm font-bold text-foreground">
-                  {isOptimized && roadDistance !== null
-                    ? `${roadDistance.toFixed(1)} km`
-                    : `${routeOptimizationService
-                        .computeTotalDistance(stops.map((s) => s.coordinates))
-                        .toFixed(1)} km`}
-                </span>
+        {/* Lista de paradas u Onboarding */}
+        <div className="px-4 pb-2 shrink-0">
+          {stops.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-6">
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <span className="text-primary font-bold text-lg">1</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Busca lugares</h3>
+                <p className="text-sm text-muted-foreground max-w-[240px]">
+                  Escribe el nombre de un restaurante, bar, discoteca o
+                  dirección.
+                </p>
               </div>
 
-              {isOptimized && roadDuration !== null && (
+              <div className="text-muted-foreground/40">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </div>
+
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <span className="text-primary font-bold text-lg">2</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Añade paradas</h3>
+                <p className="text-sm text-muted-foreground max-w-[240px]">
+                  También puedes hacer clic directamente en el mapa para añadir
+                  una parada.
+                </p>
+              </div>
+
+              <div className="text-muted-foreground/40">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </div>
+
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <span className="text-primary font-bold text-lg">3</span>
+                </div>
+                <h3 className="font-semibold text-foreground">
+                  Optimiza tu ruta
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-[240px]">
+                  Con al menos 2 paradas, pulsa Optimizar ruta para calcular el
+                  mejor recorrido.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <VenueList
+              venues={stops}
+              optimizedRoute={optimizedRoute}
+              onRemove={handleRemoveStop}
+              onUpdateDeadline={handleUpdateDeadline}
+              isOptimized={isOptimized}
+              isOptimizing={isOptimizing}
+              onShowDetail={handleShowDetail}
+            />
+          )}
+        </div>
+
+        {/* Métricas */}
+        {stops.length > 0 && (
+          <div className="px-4 pb-2 shrink-0">
+            <Card className="bg-muted/50">
+              <CardContent className="p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Duración estimada
+                  <span className="text-xs text-muted-foreground">
+                    {isOptimized
+                      ? "Distancia por carretera"
+                      : "Distancia total"}
                   </span>
                   <span className="text-sm font-bold text-foreground">
-                    {formatDuration(roadDuration)}
+                    {isOptimized && roadDistance !== null
+                      ? `${roadDistance.toFixed(1)} km`
+                      : `${routeOptimizationService
+                          .computeTotalDistance(stops.map((s) => s.coordinates))
+                          .toFixed(1)} km`}
                   </span>
                 </div>
-              )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Paradas</span>
-                <span className="text-sm font-bold text-foreground">
-                  {stops.length}
-                </span>
+                {isOptimized && roadDuration !== null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Duración estimada
+                    </span>
+                    <span className="text-sm font-bold text-foreground">
+                      {formatDuration(roadDuration)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Paradas</span>
+                  <span className="text-sm font-bold text-foreground">
+                    {stops.length}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Itinerary save*/}
+        <div className="px-4 pb-2 shrink-0">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Itinerarios guardados
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Guarda y recupera tus rutas más usadas.
+              </p>
+            </div>
+
+            {isSaving ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={itineraryName}
+                  onChange={(e) => setItineraryName(e.target.value)}
+                  placeholder="Nombre del itinerario..."
+                  className="h-8 text-xs w-40"
+                  autoFocus
+                  onKeyDown={(e) => e.key === "Enter" && confirmSaveItinerary()}
+                />
+                <Button size="sm" onClick={confirmSaveItinerary}>
+                  Guardar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsSaving(false);
+                    setItineraryName("");
+                  }}
+                >
+                  Cancelar
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSaveCurrentItinerary}
+                disabled={stops.length === 0 || isOptimizing}
+              >
+                Guardar itinerario
+              </Button>
+            )}
+          </div>
+
+          {savedItineraries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay itinerarios guardados aún.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {savedItineraries.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-border bg-background p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(item.createdAt).toLocaleDateString(
+                          undefined,
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}{" "}
+                        · {item.venues.length} lugares
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() => handleLoadItinerary(item)}
+                        title="Cargar itinerario"
+                      >
+                        <Route className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() => deleteItinerary(item.id)}
+                        title="Borrar itinerario"
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* FIN SCROLLABLE CONTENT SECTION */}
+
+      {/* Progress bar durante optimización */}
+      {isOptimizing && progress && (
+        <div className="px-4 py-3 bg-blue-50 dark:bg-blue-950/30 border-t border-blue-200 dark:border-blue-900 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Optimizando ruta...
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-200">
+              {progress.current} de {progress.total}
+            </p>
+          </div>
+          <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-blue-600 dark:bg-blue-400 h-full transition-all duration-300"
+              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+            />
+          </div>
         </div>
       )}
 
-      {/* Itinerary save*/}
-      <div className="px-4 pb-2">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Itinerarios guardados
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Guarda y recupera tus rutas más usadas.
-            </p>
-          </div>
-
-          {isSaving ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={itineraryName}
-                onChange={(e) => setItineraryName(e.target.value)}
-                placeholder="Nombre del itinerario..."
-                className="h-8 text-xs w-40"
-                autoFocus
-                onKeyDown={(e) => e.key === "Enter" && confirmSaveItinerary()}
-              />
-              <Button size="sm" onClick={confirmSaveItinerary}>
-                Guardar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setIsSaving(false);
-                  setItineraryName("");
-                }}
-              >
-                Cancelar
-              </Button>
-            </div>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSaveCurrentItinerary}
-              disabled={stops.length === 0 || isOptimizing}
-            >
-              Guardar itinerario
-            </Button>
-          )}
-        </div>
-
-        {savedItineraries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No hay itinerarios guardados aún.
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {savedItineraries.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border border-border bg-background p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(item.createdAt).toLocaleDateString(undefined, {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}{" "}
-                      · {item.venues.length} lugares
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => handleLoadItinerary(item)}
-                      title="Cargar itinerario"
-                    >
-                      <Route className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => deleteItinerary(item.id)}
-                      title="Borrar itinerario"
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Botones de acción */}
-      <div className="p-4 pt-2 space-y-2">
-        <Button
-          className="w-full gap-2"
-          onClick={handleOptimize}
-          disabled={stops.length < 2 || isOptimizing}
-        >
-          {isOptimizing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Route className="h-4 w-4" />
-          )}
-          {isOptimizing ? "Calculando ruta..." : "Optimizar ruta"}
-        </Button>
+      <div className="p-4 pt-3 space-y-2 shrink-0 bg-card border-t border-border mt-auto z-10">
+        {isOptimizing ? (
+          <Button
+            className="w-full gap-2 bg-red-600 hover:bg-red-700"
+            onClick={handleCancelOptimization}
+          >
+            <X className="h-4 w-4" />
+            Cancelar optimización
+          </Button>
+        ) : (
+          <Button
+            className="w-full gap-2"
+            onClick={handleOptimize}
+            disabled={stops.length < 2 || isOptimizing}
+          >
+            {isOptimizing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Route className="h-4 w-4" />
+            )}
+            {isOptimizing ? "Calculando ruta..." : "Optimizar ruta"}
+          </Button>
+        )}
 
         <div className="flex gap-2">
           <Button
