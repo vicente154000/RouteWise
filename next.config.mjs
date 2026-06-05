@@ -1,11 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
+  // next/image optimizer requires a server; disable for static export
   images: {
     unoptimized: true,
   },
-
-  basePath: "/RouteWise",
 };
+
+// When DEPLOY_TARGET=github-pages, configure for static export
+// Used by .github/workflows/deploy.yml
+if (process.env.DEPLOY_TARGET === "github-pages") {
+  nextConfig.output = "export";
+  nextConfig.basePath = "/RouteWise";
+  nextConfig.assetPrefix = "/RouteWise/";
+}
 
 export default nextConfig;

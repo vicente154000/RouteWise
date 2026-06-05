@@ -1,0 +1,51 @@
+# ============================================================
+# Deploy to GitHub Pages — RouteWise
+# Builds the static export and pushes to the gh-pages branch
+# ============================================================
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+
+# Allow only one concurrent deployment
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static export
+        run: npm run build
+        env:
+          DEPLOY_TARGET: github-pages
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          # Use the latest commit message as the deployment message
+          commit_message: "deploy: ${{ github.event.head_commit.message }}"
