@@ -34,3 +34,11 @@ export interface Venue {
   isFeatured?: boolean;
   timeWindow?: TimeWindow;
 }
+export interface SavedItinerary {
+  id: string;
+  name: string;
+  venues: Venue[];
+  optimizedRoute: Venue[];
+  geometry?: Coordinate[];
+  createdAt: string;
+}
