@@ -26,6 +26,8 @@ import type { Venue, Coordinate, VenueCategory } from "@/core/domain/venue"; // 
 import type { Suggestion } from "@/core/infrastructure/geocoding";
 import { routeOptimizationService } from "@/core/infrastructure/dependencies";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useSavedItineraries } from "@/lib/useSavedItineraries";
+import type { SavedItinerary } from "@/core/domain/venue";
 
 const INPUT_ALIGNMENT_OFFSET_CLASS = "mb-[1px]";
 
@@ -37,6 +39,7 @@ interface SidebarProps {
   setRouteGeometry: React.Dispatch<React.SetStateAction<Coordinate[]>>;
   isOptimized: boolean;
   setIsOptimized: React.Dispatch<React.SetStateAction<boolean>>;
+  routeGeometry?: Coordinate[];
 }
 
 export default function Sidebar({
@@ -47,6 +50,7 @@ export default function Sidebar({
   setRouteGeometry,
   isOptimized,
   setIsOptimized,
+  routeGeometry,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -56,10 +60,15 @@ export default function Sidebar({
   const [error, setError] = useState<string | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [roadDuration, setRoadDuration] = useState<number | null>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [itineraryName, setItineraryName] = useState("");
   const [startTime, setStartTime] = useLocalStorage<string>(
     "routewise-start-time",
     "08:00",
   );
+  const { savedItineraries, saveItinerary, deleteItinerary } =
+    useSavedItineraries();
 
   // <-- NUEVOS ESTADOS: Control de filtros en el estado del Sidebar (no localStorage)
   const [selectedCategories, setSelectedCategories] = useState<VenueCategory[]>(
@@ -70,6 +79,59 @@ export default function Sidebar({
   // Venue detail modal state
   const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
   const [detailIndex, setDetailIndex] = useState(0);
+
+  const handleSaveCurrentItinerary = () => {
+    if (stops.length === 0) {
+      toast.error("Añade paradas antes de guardar un itinerario.");
+      return;
+    }
+    // En lugar de usar prompt(), abrimos nuestra propia cajita de texto
+    setIsSaving(true);
+  };
+
+  const confirmSaveItinerary = () => {
+    if (!itineraryName.trim()) {
+      toast.error("El nombre no puede estar vacío");
+      return;
+    }
+
+    const itinerary: SavedItinerary = {
+      id: crypto.randomUUID(),
+      name: itineraryName.trim(),
+      venues: stops,
+      optimizedRoute,
+      geometry: routeGeometry,
+      createdAt: new Date().toISOString(),
+    };
+
+    saveItinerary(itinerary);
+    toast.success("Itinerario guardado");
+
+    // Limpiamos y cerramos
+    setItineraryName("");
+    setIsSaving(false);
+  };
+
+  const handleLoadItinerary = (itinerary: SavedItinerary) => {
+    const loadedGeometry = itinerary.geometry ?? [];
+
+    setStops(itinerary.venues);
+    setOptimizedRoute(itinerary.optimizedRoute);
+    setRouteGeometry(loadedGeometry);
+    setIsOptimized(itinerary.optimizedRoute.length > 0);
+    setRoadDistance(
+      itinerary.optimizedRoute.length > 0
+        ? routeOptimizationService.computeTotalDistance(
+            loadedGeometry.length > 0
+              ? loadedGeometry
+              : itinerary.optimizedRoute.map((venue) => venue.coordinates),
+          )
+        : null,
+    );
+    setRoadDuration(null);
+
+    toast.success(`Itinerario cargado: ${itinerary.name}`);
+  };
 
   const handleShowDetail = useCallback(
     (venue: Venue) => {
@@ -441,6 +503,106 @@ export default function Sidebar({
           </Card>
         </div>
       )}
+
+      {/* Itinerary save*/}
+      <div className="px-4 pb-2">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Itinerarios guardados
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Guarda y recupera tus rutas más usadas.
+            </p>
+          </div>
+
+          {isSaving ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={itineraryName}
+                onChange={(e) => setItineraryName(e.target.value)}
+                placeholder="Nombre del itinerario..."
+                className="h-8 text-xs w-40"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && confirmSaveItinerary()}
+              />
+              <Button size="sm" onClick={confirmSaveItinerary}>
+                Guardar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setIsSaving(false);
+                  setItineraryName("");
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSaveCurrentItinerary}
+              disabled={stops.length === 0 || isOptimizing}
+            >
+              Guardar itinerario
+            </Button>
+          )}
+        </div>
+
+        {savedItineraries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No hay itinerarios guardados aún.
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {savedItineraries.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-border bg-background p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {item.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(item.createdAt).toLocaleDateString(undefined, {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}{" "}
+                      · {item.venues.length} lugares
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => handleLoadItinerary(item)}
+                      title="Cargar itinerario"
+                    >
+                      <Route className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => deleteItinerary(item.id)}
+                      title="Borrar itinerario"
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Botones de acción */}
       <div className="p-4 pt-2 space-y-2">

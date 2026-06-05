@@ -134,6 +134,7 @@ function Home() {
           optimizedRoute={optimizedRoute}
           setOptimizedRoute={setOptimizedRoute}
           setRouteGeometry={setRouteGeometry}
+          routeGeometry={routeGeometry}
           isOptimized={isOptimized}
           setIsOptimized={setIsOptimized}
         />
@@ -148,6 +149,7 @@ function Home() {
             optimizedRoute={optimizedRoute}
             setOptimizedRoute={setOptimizedRoute}
             setRouteGeometry={setRouteGeometry}
+            routeGeometry={routeGeometry}
             isOptimized={isOptimized}
             setIsOptimized={setIsOptimized}
           />
