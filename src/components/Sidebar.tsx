@@ -1,9 +1,11 @@
 "use client";
+
 import { Input } from "./ui/input";
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Plus,
@@ -20,11 +22,12 @@ import {
 import VenueAutocomplete from "./VenueAutocomplete";
 import VenueList from "./VenueList";
 import VenueDetailModal from "./VenueDetailModal";
-import ItinerarySummary from "./ItinerarySummary";
-import type { Venue, Coordinate, VenueCategory } from "@/core/domain/venue";
+import type { Venue, Coordinate, VenueCategory } from "@/core/domain/venue"; // <-- Añadido VenueCategory
 import type { Suggestion } from "@/core/infrastructure/geocoding";
 import { routeOptimizationService } from "@/core/infrastructure/dependencies";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+
+const INPUT_ALIGNMENT_OFFSET_CLASS = "mb-[1px]";
 
 interface SidebarProps {
   stops: Venue[];
@@ -226,6 +229,15 @@ export default function Sidebar({
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+    return `${minutes} min`;
+  };
+
   return (
     <div className="h-full flex flex-col bg-card border-r border-border">
       {/* Header */}
@@ -292,7 +304,7 @@ export default function Sidebar({
           <Button
             size="icon"
             disabled={isOptimizing}
-            className="opacity-50 shrink-0 mb-[1px]"
+            className={`opacity-50 shrink-0 ${INPUT_ALIGNMENT_OFFSET_CLASS}`}
             title="Selecciona una dirección de las sugerencias"
           >
             <Plus className="h-4 w-4" />
@@ -389,20 +401,46 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Itinerary Summary */}
-      <div className="px-4 pb-2">
-        <ItinerarySummary
-          venues={isOptimized ? optimizedRoute : stops}
-          totalDistance={
-            isOptimized && roadDistance !== null
-              ? roadDistance
-              : routeOptimizationService.computeTotalDistance(
-                  stops.map((s) => s.coordinates),
-                )
-          }
-          totalDuration={roadDuration}
-        />
-      </div>
+      {/* Métricas */}
+      {stops.length > 0 && (
+        <div className="px-4 pb-2">
+          <Card className="bg-muted/50">
+            <CardContent className="p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {isOptimized ? "Distancia por carretera" : "Distancia total"}
+                </span>
+                <span className="text-sm font-bold text-foreground">
+                  {isOptimized && roadDistance !== null
+                    ? `${roadDistance.toFixed(1)} km`
+                    : `${routeOptimizationService
+                        .computeTotalDistance(stops.map((s) => s.coordinates))
+                        .toFixed(1)} km`}
+                </span>
+              </div>
+
+              {isOptimized && roadDuration !== null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Duración estimada
+                  </span>
+                  <span className="text-sm font-bold text-foreground">
+                    {formatDuration(roadDuration)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Paradas</span>
+                <span className="text-sm font-bold text-foreground">
+                  {stops.length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Botones de acción */}
       <div className="p-4 pt-2 space-y-2">
