@@ -1,4 +1,8 @@
-import type { RouteResult, RouteSegment } from "../domain/tsp";
+import type {
+  RouteResult,
+  RouteSegment,
+  OptimizationProgress,
+} from "../domain/tsp";
 import { haversineDistance } from "../domain/tsp";
 import type { Coordinate } from "../domain/venue";
 
@@ -100,29 +104,34 @@ export async function getRoute(
 
 /**
  * Get the full road route for a sequence of ordered stops.
- * Fetches all segments in parallel and returns the combined result.
+ * Fetches all segments sequentially with progress tracking and cancellation support.
+ *
+ * @param stops - Array of coordinates representing the route stops
+ * @param abortSignal - Optional AbortSignal to cancel the operation
+ * @param onProgress - Optional callback fired after each segment completes
  */
 export async function getFullRoute(
   stops: Coordinate[],
+  abortSignal?: AbortSignal,
+  onProgress?: (progress: OptimizationProgress) => void,
 ): Promise<RouteResult | null> {
   if (stops.length < 2) return null;
-
-  // Build all segment promises
-  const segmentPromises: Promise<RouteSegment | null>[] = [];
-  for (let i = 0; i < stops.length - 1; i++) {
-    segmentPromises.push(getRoute(stops[i], stops[i + 1]));
-  }
-
-  // Execute all requests in parallel
-  const results = await Promise.allSettled(segmentPromises);
 
   const segments: RouteSegment[] = [];
   let totalDistance = 0;
   let totalDuration = 0;
   const fullGeometry: Coordinate[] = [];
+  const totalSegments = stops.length - 1;
 
-  results.forEach((result, i) => {
-    const segment = result.status === "fulfilled" ? result.value : null;
+  // Process segments sequentially
+  for (let i = 0; i < stops.length - 1; i++) {
+    // Check if operation was aborted
+    if (abortSignal?.aborted) {
+      throw new DOMException("Route optimization cancelled", "AbortError");
+    }
+
+    // Fetch the segment
+    const segment = await getRoute(stops[i], stops[i + 1]);
 
     if (segment) {
       segments.push(segment);
@@ -155,7 +164,10 @@ export async function getFullRoute(
         fullGeometry.push(stops[i], stops[i + 1]);
       }
     }
-  });
+
+    // Emit progress after each segment (1-indexed for display)
+    onProgress?.({ current: i + 1, total: totalSegments });
+  }
 
   return {
     segments,
