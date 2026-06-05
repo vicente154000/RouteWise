@@ -30,6 +30,7 @@ export default function MobileSidebar({
   const [translateY, setTranslateY] = useState(260);
   const [dragStartY, setDragStartY] = useState<number | null>(null);
   const [dragStartTranslate, setDragStartTranslate] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const height = window.innerHeight;
@@ -39,8 +40,10 @@ export default function MobileSidebar({
   }, []);
 
   useEffect(() => {
+    if (dragStartY === null) return;
+
     const handleMove = (event: PointerEvent) => {
-      if (dragStartY === null) return;
+      event.preventDefault();
       const deltaY = event.clientY - dragStartY;
       const nextTranslate = Math.min(
         Math.max(0, dragStartTranslate + deltaY),
@@ -50,25 +53,23 @@ export default function MobileSidebar({
     };
 
     const handleUp = () => {
-      if (dragStartY === null) return;
       const shouldClose = translateY > collapsedTranslate * 0.55;
       setTranslateY(shouldClose ? collapsedTranslate : 0);
       setDragStartY(null);
       setDragStartTranslate(0);
+      setIsDragging(false);
     };
 
-    if (dragStartY !== null) {
-      window.addEventListener("pointermove", handleMove);
-      window.addEventListener("pointerup", handleUp);
-      window.addEventListener("pointercancel", handleUp);
-    }
+    window.addEventListener("pointermove", handleMove, { passive: false });
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
 
     return () => {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
       window.removeEventListener("pointercancel", handleUp);
     };
-  }, [collapsedTranslate, dragStartY, dragStartTranslate, translateY]);
+  }, [collapsedTranslate, dragStartTranslate, dragStartY, translateY]);
 
   const toggleSheet = () => {
     setTranslateY((current) => (current === 0 ? collapsedTranslate : 0));
@@ -77,6 +78,7 @@ export default function MobileSidebar({
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     setDragStartY(event.clientY);
     setDragStartTranslate(translateY);
+    setIsDragging(true);
     sheetRef.current?.setPointerCapture(event.pointerId);
   };
 
@@ -87,7 +89,8 @@ export default function MobileSidebar({
         className="mx-auto w-full max-w-xl rounded-[28px] border border-border bg-card shadow-2xl"
         style={{
           transform: `translateY(${translateY}px)`,
-          transition: dragStartY === null ? "transform 250ms ease-out" : "none",
+          transition: isDragging ? "none" : "transform 250ms ease-out",
+          touchAction: "none",
           maxHeight: "85vh",
           height: "85vh",
         }}
