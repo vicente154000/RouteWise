@@ -301,7 +301,7 @@ export default function Sidebar({
   };
 
   return (
-    <div className="h-full flex flex-col bg-card border-r border-border">
+    <div className="flex-1 min-h-0 flex flex-col bg-card border-r border-border">
       {/* Header */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between gap-2 mb-1">

@@ -21,6 +21,9 @@ const MapView = dynamic(() => import("@/components/MapView"), {
     </div>
   ),
 });
+const MobileSidebar = dynamic(() => import("@/components/MobileSidebars"), {
+  ssr: false,
+});
 
 function Home() {
   const [stops, setStops] = useLocalStorage<Venue[]>("routewise-stops", []);
@@ -141,20 +144,16 @@ function Home() {
       </aside>
 
       {/* Mobile sidebar - bottom sheet */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 z-[1000]">
-        <div className="bg-card border border-border rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
-          <Sidebar
-            stops={stops}
-            setStops={setStops}
-            optimizedRoute={optimizedRoute}
-            setOptimizedRoute={setOptimizedRoute}
-            setRouteGeometry={setRouteGeometry}
-            routeGeometry={routeGeometry}
-            isOptimized={isOptimized}
-            setIsOptimized={setIsOptimized}
-          />
-        </div>
-      </div>
+      <MobileSidebar
+        stops={stops}
+        setStops={setStops}
+        optimizedRoute={optimizedRoute}
+        setOptimizedRoute={setOptimizedRoute}
+        setRouteGeometry={setRouteGeometry}
+        routeGeometry={routeGeometry}
+        isOptimized={isOptimized}
+        setIsOptimized={setIsOptimized}
+      />
 
       {/* Map area */}
       <section className="flex-1 h-full relative">
