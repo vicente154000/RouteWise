@@ -31,10 +31,17 @@ export default function MobileSidebar({
   const [dragStartY, setDragStartY] = useState<number | null>(null);
   const [dragStartTranslate, setDragStartTranslate] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isOpenState, setIsOpenState] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  const isCollapsed = !isOpenState && translateY >= collapsedTranslate - 4;
+  const isOpen = isOpenState || translateY <= 4;
 
   useEffect(() => {
     const height = window.innerHeight;
-    const collapsed = Math.min(280, Math.max(180, Math.round(height * 0.55)));
+    const sheetHeight = Math.round(height * 0.85); // sheet uses 85vh
+    const handleVisible = 72; // px visible when collapsed (handle area)
+    const collapsed = Math.max(120, sheetHeight - handleVisible);
     setCollapsedTranslate(collapsed);
     setTranslateY(collapsed);
   }, []);
@@ -54,7 +61,7 @@ export default function MobileSidebar({
 
     const handleUp = () => {
       const shouldClose = translateY > collapsedTranslate * 0.55;
-      setTranslateY(shouldClose ? collapsedTranslate : 0);
+      setIsOpenState(!shouldClose);
       setDragStartY(null);
       setDragStartTranslate(0);
       setIsDragging(false);
@@ -72,10 +79,42 @@ export default function MobileSidebar({
   }, [collapsedTranslate, dragStartTranslate, dragStartY, translateY]);
 
   const toggleSheet = () => {
-    setTranslateY((current) => (current === 0 ? collapsedTranslate : 0));
+    setIsOpenState((v) => !v);
   };
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+  // Sync translateY with isOpenState (controlled open/close)
+  useEffect(() => {
+    if (isOpenState) {
+      // mount then animate open
+      setIsMounted(true);
+      // ensure start position is collapsed so transition runs
+      setTranslateY(collapsedTranslate);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => setTranslateY(0)),
+      );
+    } else {
+      // animate closed then unmount after transition
+      setTranslateY(collapsedTranslate);
+      const t = setTimeout(() => setIsMounted(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [isOpenState, collapsedTranslate]);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    // If not mounted (collapsed), mount and prepare to drag open
+    if (!isMounted) {
+      setIsMounted(true);
+      setTranslateY(collapsedTranslate);
+      // let mount complete then start drag
+      requestAnimationFrame(() => {
+        setDragStartY(event.clientY);
+        setDragStartTranslate(collapsedTranslate);
+        setIsDragging(true);
+        sheetRef.current?.setPointerCapture(event.pointerId);
+      });
+      return;
+    }
+
     setDragStartY(event.clientY);
     setDragStartTranslate(translateY);
     setIsDragging(true);
@@ -84,50 +123,66 @@ export default function MobileSidebar({
 
   return (
     <div className="md:hidden fixed inset-x-4 bottom-4 z-[1000]">
-      <div
-        ref={sheetRef}
-        className="mx-auto w-full max-w-xl rounded-[28px] border border-border bg-card shadow-2xl"
-        style={{
-          transform: `translateY(${translateY}px)`,
-          transition: isDragging ? "none" : "transform 250ms ease-out",
-          touchAction: "none",
-          maxHeight: "85vh",
-          height: "85vh",
-        }}
-      >
-        <div className="flex flex-col h-full">
-          <div
-            className="flex flex-col gap-3 px-4 pt-4 pb-2"
-            onPointerDown={handlePointerDown}
-          >
-            <div className="mx-auto h-1.5 w-14 rounded-full bg-muted/60" />
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">Itinerario</span>
-              <button
-                type="button"
-                onClick={toggleSheet}
-                className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground/80 transition hover:bg-muted/80"
-              >
-                {translateY === 0 ? "Cerrar" : "Abrir"}
-              </button>
-            </div>
-          </div>
-
-          <div className="h-full overflow-hidden rounded-b-[28px] border-t border-border">
-            <div className="h-full overflow-y-auto px-4 pb-6">
-              <Sidebar
-                stops={stops}
-                setStops={setStops}
-                optimizedRoute={optimizedRoute}
-                setOptimizedRoute={setOptimizedRoute}
-                setRouteGeometry={setRouteGeometry}
-                routeGeometry={routeGeometry}
-                isOptimized={isOptimized}
-                setIsOptimized={setIsOptimized}
-              />
+      {isMounted && (
+        <div
+          ref={sheetRef}
+          className="mx-auto w-full max-w-xl rounded-[28px] border border-border bg-card shadow-2xl overflow-hidden"
+          style={{
+            transform: `translateY(${translateY}px)`,
+            transition: isDragging
+              ? "none"
+              : "transform 300ms cubic-bezier(.22,.9,.28,1)",
+            touchAction: "none",
+            maxHeight: "85vh",
+            height: "85vh",
+            pointerEvents: isCollapsed ? "none" : "auto",
+          }}
+        >
+          <div className="flex flex-col">
+            {/* Inner content hidden when collapsed to keep only handle interactive */}
+            <div
+              className="rounded-b-[28px] border-t border-border flex-1 min-h-0"
+              style={{
+                display: isCollapsed ? "none" : "block",
+                pointerEvents: isCollapsed ? "none" : "auto",
+              }}
+            >
+              <div className="h-[calc(85vh-72px)] flex flex-col overflow-hidden px-4 pb-6">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <Sidebar
+                    stops={stops}
+                    setStops={setStops}
+                    optimizedRoute={optimizedRoute}
+                    setOptimizedRoute={setOptimizedRoute}
+                    setRouteGeometry={setRouteGeometry}
+                    routeGeometry={routeGeometry}
+                    isOptimized={isOptimized}
+                    setIsOptimized={setIsOptimized}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* External handle (always interactive) positioned above the collapsed sheet */}
+      <div
+        className="absolute left-0 right-0 bottom-4 flex justify-center z-[1100]"
+        style={{ pointerEvents: "auto", transform: `translateY(-12px)` }}
+      >
+        <button
+          onPointerDown={handlePointerDown}
+          onClick={toggleSheet}
+          className="mx-auto w-full max-w-md flex items-center justify-center gap-3 px-4 py-2 rounded-[28px] bg-card border border-border shadow-md text-sm"
+          style={{ maxWidth: 720 }}
+          aria-expanded={isOpen}
+        >
+          <div className="h-1.5 w-14 rounded-full bg-muted/60" />
+          <span className="text-xs text-muted-foreground">
+            {isOpen ? "Cerrar" : "Abrir"}
+          </span>
+        </button>
       </div>
     </div>
   );
