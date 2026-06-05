@@ -22,6 +22,10 @@ export interface RouteResult {
 export interface TSPConfig {
   featuredWeight?: number;
 }
+export interface OptimizationProgress {
+  current: number; // Segment index completed (1-indexed for display)
+  total: number; // Total number of segments to process
+}
 
 /**
  * A stop that may include an `isFeatured` flag for weighted TSP optimization.

@@ -15,8 +15,12 @@ class OSRMRoutingAdapter implements IRoutingService {
     return routing.getRoute(from, to);
   }
 
-  async getFullRoute(stops: Coordinate[]) {
-    return routing.getFullRoute(stops);
+  async getFullRoute(
+    stops: Coordinate[],
+    abortSignal?: AbortSignal,
+    onProgress?: (progress: { current: number; total: number }) => void,
+  ) {
+    return routing.getFullRoute(stops, abortSignal, onProgress);
   }
 }
 

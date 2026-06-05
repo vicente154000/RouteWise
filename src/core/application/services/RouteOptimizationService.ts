@@ -3,6 +3,7 @@ import {
   optimizeRoute,
   computeArrivalTimes,
   totalDistance,
+  type OptimizationProgress,
 } from "../../domain/tsp";
 import type { IRoutingService } from "../../infrastructure/repositories/IRoutingService";
 
@@ -25,6 +26,8 @@ export class RouteOptimizationService {
   async optimize(
     venues: Venue[],
     startTime?: string,
+    abortSignal?: AbortSignal,
+    onProgress?: (progress: OptimizationProgress) => void,
   ): Promise<OptimizationResult> {
     if (venues.length <= 1) {
       return { venues, geometry: venues.map((v) => v.coordinates) };
@@ -34,8 +37,17 @@ export class RouteOptimizationService {
     const coords = optimized.map((v) => v.coordinates);
     let routeResult;
     try {
-      routeResult = await this.routing.getFullRoute(coords);
-    } catch {
+      routeResult = await this.routing.getFullRoute(
+        coords,
+        abortSignal,
+        onProgress,
+      );
+    } catch (err) {
+      // If aborted, re-throw the error so caller can handle cancellation
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw err;
+      }
+      // Otherwise, treat routing failure as fallback scenario
       routeResult = null;
     }
 
